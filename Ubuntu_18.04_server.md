@@ -170,17 +170,16 @@ scp [参数] <源地址 (用户名@IP地址或主机名)>:<文件路径> <目的
 -r 传输文件夹
 
 -v 展示传输详情
+```shell
+scp /home/soft/jdk-7u55-linux-i586.tar.gz root@192.168.132.132:/
 
-
-
-**scp /home/soft/jdk-7u55-linux-i586.tar.gz root@192.168.132.132:/**
-
-**scp -r /home/soft root@192.168.132.132:/**
-
+scp -r /home/soft root@192.168.132.132:/
+```
 
 
 #  配置桌面快捷方式
-1. 创建desktop文件
+创建desktop文件
+
 ```shell
 vim Postman.desktop
 
@@ -194,9 +193,8 @@ Type=Application
 Categories=Development;
 
 sudo cp Postman.desktop /usr/share/applications/
-
 ```
-#  安装GNOME桌面
+# 安装GNOME桌面
 
 1. 输入以下命令
 ```shell
@@ -246,11 +244,13 @@ workon Django  激活虚拟环境
 deactivate     注销当前已经被激活的虚拟环境
 lsvirtualenv   显示已安装虚拟环境
 ```
+
 # 查看端口
 ```shell
 ps -ef|grep 8000
 netstat -tunlp|grep 8000
 ```
+
 # 防火墙
 - selinux 内置防火墙
 1. 查询selinux状态
@@ -289,7 +289,68 @@ nameserver 223.5.5.5
 
 nslookup 
 
-# Pandoc格式转换
+
+
+# 创建自己的BLOG
+
+## [Sphinx](http://sphinx-doc.org/)生成网页
+
+1. 安装Sphinx
+
+```shell
+pip install sphinx sphinx-autobuild sphinx_rtd_theme
+```
+
+2. 创建一个工程项目
+
+```shell
+mkdir docs
+cd docs
+sphinx-quickstart
+
+# 其他按照默认设置
+Project name: LHM's BLOG
+Author name(s): LHM
+Project release []: 1.0
+Project language [en]: zh_CN
+
+tree
+...
+index.rst   #index文件
+conf.py      #配置文件
+...
+
+# 生成html
+make html
+```
+
+
+
+## Markdown
+
+1. 安装recommonmark
+
+```shell
+pip install recommonmark
+```
+
+2. 在conf.py添加下面内容
+
+```python
+from recommonmark.parser import CommonMarkParser
+
+source_parsers = {
+    '.md': CommonMarkParser,
+}
+
+source_suffix = ['.rst', '.md']
+```
+
+
+
+
+
+## Pandoc格式转换
 
 markdown文件转换rst
 
@@ -336,6 +397,7 @@ sudo service mysql stop
 sudo service mysql restart
 ```
 3. 初始化
+
 ```shell
 mysql_secure_installation
 
@@ -349,64 +411,64 @@ Reload privilege tables now? Y #重新加载权限表
 
 4. 因为安装的过程中没让设置密码，可能密码为空，但无论如何都进不去mysql 
 
-   1.  修改配置文件
+1.  修改配置文件
 
-   ```shell
-   sudo vim /etc/mysql/mysql.conf.d/mysqld.cnf
-   配置文件中的[mysqld]这一块中加入
-   character-set-server=utf8
-   collation-server=utf8_general_ci
-   skip-grant-tables
-      
-   service mysql restart  重新启动mysql
-   ```
+```shell
+sudo vim /etc/mysql/mysql.conf.d/mysqld.cnf
+配置文件中的[mysqld]这一块中加入
+character-set-server=utf8
+collation-server=utf8_general_ci
+skip-grant-tables
+   
+service mysql restart  重新启动mysql
+```
 
-   2. 修改mysql  root密码
+2. 修改mysql  root密码
 
-   ```shell
-   mysql -u root -p    遇见输入密码的提示直接回车即可,进入mysql
-   
-   use mysql;
-   update user set authentication_string=password("你的密码") where user="root";  
-   flush privileges;
-   select user,plugin from user;  
-   # 如果plugin='auth_socket'
-   update user set plugin='mysql_native_password' where user='root';
-   select user,host from user;  
-   # 如果host='localhost'
-   update user set host = '%' where user = 'root';  远程连接
-	quit 		退出mysql
-   ```
+```shell
+mysql -u root -p    遇见输入密码的提示直接回车即可,进入mysql
 
-   3. 注释配置文件
-   
-   ```shell
-   sudo vim /etc/mysql/mysql.conf.d/mysqld.cnf
-   #  skip-grant-tables
-   
-   # bind-address  = 127.0.0.1   远程连接
-   service mysql restart  重新启动mysql
-   ```
-   
-   4. 创建非root账号
-   
-   ```sql
-   -- 创建普通用户，权限非常低
-   create user uroot@'%' identified by 'uroot';
-   ```
-   
-   5. 添加权限
-   
-   ```sql
-   -- 对所有库和所有表授权所有权限
-   grant all privileges on *.* to uroot@'%' ;
-   -- 授权root用户需identified 密码
-   grant all privileges on *.* to root@'%'  identified by 'root';
-   -- 刷新授权表
-   flush privileges; 
-   ```
-   
-   
+use mysql;
+update user set authentication_string=password("你的密码") where user="root";  
+flush privileges;
+select user,plugin from user;  
+# 如果plugin='auth_socket'
+update user set plugin='mysql_native_password' where user='root';
+select user,host from user;  
+# 如果host='localhost'
+update user set host = '%' where user = 'root';  远程连接
+     quit 		退出mysql
+```
+
+3. 注释配置文件
+
+```shell
+sudo vim /etc/mysql/mysql.conf.d/mysqld.cnf
+#  skip-grant-tables
+
+# bind-address  = 127.0.0.1   远程连接
+service mysql restart  重新启动mysql
+```
+
+4. 创建非root账号
+
+```shell
+-- 创建普通用户，权限非常低
+create user uroot@'%' identified by 'uroot';
+```
+
+5. 添加权限
+
+```shell
+-- 对所有库和所有表授权所有权限
+grant all privileges on *.* to uroot@'%' ;
+-- 授权root用户需identified 密码
+grant all privileges on *.* to root@'%'  identified by 'root';
+-- 刷新授权表
+flush privileges; 
+```
+
+
 ## mysql数据备份与恢复
 1. 导出数据库
 
@@ -416,7 +478,7 @@ mysqldump -u root -p --all-databases > /data/AllMysql.dump
 
 2. 登录mysql 恢复数据库
 
-```sql
+```shell
 source /data/AllMysql.dump;
 ```
 
@@ -464,7 +526,7 @@ scp /data/zhucong.dump   root@slace_ip:/data/
 
 4. 登录slace从库导入主库数据，保持数据一致性
 
-```sql
+```shell
 mysql -uroot -p
 source /data/zhucong.dump
 ```
@@ -486,7 +548,7 @@ show variables like 'log_bin';
 
 6. 通过一条命令，开启主从同步
 
-```sql
+```shell
 change master to master_host='192.168.129.128',
 master_user='slace_copy',
 master_password='P@ssw0rd',
@@ -496,7 +558,7 @@ master_log_pos=位置;   position值
 
 7. 开启从库的slave 同步
 
-```sql
+```shell
 start slave;
 -- 查看slave IO、SQL Running Yes
 show slave status\G;
@@ -515,7 +577,7 @@ show slave status\G;
 
 8. 解锁主库表
 
-```sql
+```shell
 unlock tables;
 ```
 
@@ -591,41 +653,41 @@ sudo grep -v "^#" /etc/redis/redis.conf | grep -v "^$"
 
 - RDB持久化(数据快照)
 
-  ```shell
-  # rdb.conf
-  daemonize yes   #后台启动
-  bind 0.0.0.0
-  port 6379
-  requirepass P@ssw0rd
-  logfile /data/6379/redis.log
-  dir /data/6379
-  dbfilename  dump.rdb
-  save 900 1								#每900秒 有1个修改记录
-  save 300 10							  #每300秒 有10个修改记录
-  save 60 10000						#每60秒 有10000个修改记录
-  ```
+```shell
+# rdb.conf
+daemonize yes   #后台启动
+bind 0.0.0.0
+port 6379
+requirepass P@ssw0rd
+logfile /data/6379/redis.log
+dir /data/6379
+dbfilename  dump.rdb
+save 900 1								#每900秒 有1个修改记录
+save 300 10							  #每300秒 有10个修改记录
+save 60 10000						#每60秒 有10000个修改记录
+```
 
   
 
 - AOF持久化
 
-  ```shell
-  # aof.conf
-  daemonize yes   #后台启动
-  bind 0.0.0.0
-  port 6379
-  requirepass P@ssw0rd
-  logfile /data/6379/redis.log
-  dir /data/6379
+```shell
+# aof.conf
+daemonize yes   #后台启动
+bind 0.0.0.0
+port 6379
+requirepass P@ssw0rd
+logfile /data/6379/redis.log
+dir /data/6379
   
-  appendonly yes
-  appendfsync always #总是修改类的操作
+appendonly yes
+appendfsync always #总是修改类的操作
   							everysec #每秒做一次持久化
   							no #依赖于系统自带的缓存大小机制
   
-  #查看aof文件变化
-  tail -f appendonly.aof
-  ```
+# 查看aof文件变化
+tail -f appendonly.aof
+```
 
 ### redis不重启之rdb数据切换到aof数据
 
@@ -634,42 +696,42 @@ sudo grep -v "^#" /etc/redis/redis.conf | grep -v "^$"
 
 - 切换rdb到aof
 
-  ```shell
-  redis-cli #登录redis
-  CONFIG SET appendonly yes  #用命令激活aof持久化(临时生效，注意写到配置文件)
-  CONFIG SET save ""  #关闭rdb持久化
-  ```
+```shell
+redis-cli #登录redis
+CONFIG SET appendonly yes  #用命令激活aof持久化(临时生效，注意写到配置文件)
+CONFIG SET save ""  #关闭rdb持久化
+```
 
-  ```shell
-  vim rdb.conf
-  daemonize yes   #后台启动
-  bind 0.0.0.0
-  port 6379
-  requirepass P@ssw0rd
-  logfile /data/6379/redis.log
-  dir /data/6379
-  #dbfilename  dump.rdb
-  #save 900 1								#每900秒 有1个修改记录
-  #save 300 10							  #每300秒 有10个修改记录
-  #save 60 10000	
+```shell
+vim rdb.conf
+daemonize yes   #后台启动
+bind 0.0.0.0
+port 6379
+requirepass P@ssw0rd
+logfile /data/6379/redis.log
+dir /data/6379
+#dbfilename  dump.rdb
+#save 900 1								#每900秒 有1个修改记录
+#save 300 10							  #每300秒 有10个修改记录
+#save 60 10000	
   
-  appendonly yes
-  appendfsync everysec
-  ```
+appendonly yes
+appendfsync everysec
+```
 
 - 测试aof数据持久化
 
-  ```shell
-  kill -9 进程号
-  # pkill redis-server   根据服务名杀死进程，可以杀死所有有关redis-server
-  redis-server rdb.conf
-  ```
+```shell
+kill -9 进程号
+# pkill redis-server   根据服务名杀死进程，可以杀死所有有关redis-server
+redis-server rdb.conf
+```
 
 ## redis 主从同步
 
 1. 准备三个.conf 文件
 
-  ```shell
+```shell
 touch redis-6379.conf
 touch redis-6380.conf
 touch redis-6381.conf
@@ -686,7 +748,7 @@ dir /data/6379
 # sed -i 替换当前文件  s:替换  6379 被替换者 6380 替换为 g:全局 写到>redis-6380.conf
 sed "s/6379/6380/g" redis-6379.conf > redis-6380.conf
 sed "s/6379/6381/g" redis-6379.conf > redis-6381.conf
-  ```
+```
 
 2. 配置主从关系
 

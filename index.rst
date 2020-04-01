@@ -11,3 +11,4 @@ Welcome to Li's BLOG's documentation!
    :caption: Contents:
 
    Ubuntu_18.04_server
+   django_restframework

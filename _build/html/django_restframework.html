@@ -1,0 +1,818 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh_CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>django restframework &#8212; Li&#39;s BLOG 1.0 文档</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="_static/translations.js"></script>
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="搜索" href="search.html" />
+    <link rel="prev" title="Ubuntu 18.04 server 修改 apt 软件源为阿里云的源" href="Ubuntu_18.04_server.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="django-restframework">
+<h1>django restframework<a class="headerlink" href="#django-restframework" title="永久链接至标题">¶</a></h1>
+<div class="section" id="apiview">
+<h2>APIView<a class="headerlink" href="#apiview" title="永久链接至标题">¶</a></h2>
+<ol class="arabic">
+<li><p>用户请求到django,首先经过wsgi,中间件,然后到url路由系统,执行视图类中继承APIView执行as_view方法</p></li>
+<li><p>在源码中可以看到VPIView继承了django的View类,通过super执行View中的as_view方法<a class="reference external" href="http://www.cnblogs.com/supery007/p/8432324.html">详细看文章</a>,最终返回执行self.dispatch()</p></li>
+<li><p>按照django类中查找顺序现从自己的方法中找,如果自己没有dispatch方法再从继承的父类中找,从APIView中找dispatch方法</p></li>
+<li><p>在dispatch中首先将request执行self.initialze_request重新封装request,
+之后执行self.initial方法,这个方法一共执行4步操作: &gt;
+首先对request版本进行验证</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">版本控制执行自己类中的determine_version方法</span><span class="p">,</span><span class="n">最终是versioning_class的属性</span><span class="p">,</span><span class="n">可以通过在settings</span><span class="o">.</span><span class="n">py文件中进行配置</span>
+
+<span class="n">第二步进行用户认证</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">执行perform_authentication方法</span><span class="p">,</span><span class="n">在这个方法中执行了request</span><span class="o">.</span><span class="n">user方法</span><span class="p">,</span><span class="n">按照python类查找顺序先到APIView中进行查找</span><span class="p">,</span><span class="n">没有网View中查找都没有</span><span class="p">,</span><span class="n">往回看重新看一下之前的request封装操作</span><span class="p">,</span>
+
+<span class="n">查到restframework</span><span class="o">.</span><span class="n">request中有个Request类重新封装request</span><span class="p">,</span><span class="n">在Request中查找user方法</span><span class="p">,</span><span class="n">最后找到request</span><span class="o">.</span><span class="n">user最后返回authentication_classes实例化并返回认证列表</span>
+
+<span class="n">第三步进行权限控制</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  执行check_permissions方法,按照上面的执行的流程,最后返回permission_classes实例化并返回权限列表,然后循环实例化对象中has_permission(必须存在)方法进行判断,如果定义了权限类,
+
+  has_permission必须有返回值,可以返回布尔值或raise一个报错信息,True表示有权限不做操作,False没有权限执行permission_denied方法,首先进行判断是否进行认证,如果没有认证则raise一个没有认证错误信息,
+
+  如果有认证则raise一个没有权限错误信息。
+
+第四步进行用户访问频率限制
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">执行check_throttles方法</span><span class="p">,</span><span class="n">按照上面的执行的流程</span><span class="p">,</span><span class="n">最后返回throttle_classes实例化并节流列表</span><span class="p">,</span><span class="n">循环执行allow_request方法</span><span class="p">,</span><span class="n">源码中如果没有定义allow_request方法则restframework会返回raise错误必须重写allow_request方法</span><span class="p">,</span>
+
+<span class="n">重写allow_request</span><span class="p">,</span><span class="n">比如对匿名用户访问做限制1分钟只能访问10次超过10次休息1分钟返回false不让访问</span><span class="p">,</span><span class="n">执行到wait</span><span class="p">(</span><span class="n">必须定义</span><span class="p">)</span><span class="n">进行重写</span><span class="p">,</span><span class="n">将访问时间进行计算然后返回下次访问时间</span><span class="p">,</span>
+
+<span class="n">也可以继承restframework已经写好的类SimpleRateThrottle</span><span class="p">,</span><span class="n">AnonRateThrottle</span><span class="p">,</span><span class="n">UserRateThrottle</span><span class="p">,</span><span class="n">ScopedRateThrottle</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id1">
+<h2>解析器组件<a class="headerlink" href="#id1" title="永久链接至标题">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">LoginView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">):</span>
+            <span class="n">request</span><span class="o">.</span><span class="n">data</span>        <span class="c1">#新的request对象 @property data()</span>
+            <span class="k">return</span>
+
+<span class="kn">from</span> <span class="nn">rest_framework.request</span> <span class="kn">import</span> <span class="n">Request</span>
+<span class="k">class</span> <span class="nc">APIView</span><span class="p">(</span><span class="n">View</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">as_view</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span><span class="o">**</span><span class="n">initkwargs</span><span class="p">):</span>
+            <span class="k">pass</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">APIView</span><span class="p">,</span><span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="n">as_view</span><span class="p">(</span><span class="o">**</span><span class="n">initkwargs</span><span class="p">)</span>
+            <span class="k">def</span> <span class="nf">initialize_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the initial request object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parser_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_parser_context</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Request</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span>
+            <span class="n">parsers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_parsers</span><span class="p">(),</span>
+            <span class="n">authenticators</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_authenticators</span><span class="p">(),</span>
+            <span class="n">negotiator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_content_negotiator</span><span class="p">(),</span>
+            <span class="n">parser_context</span><span class="o">=</span><span class="n">parser_context</span>
+        <span class="p">)</span>
+        <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">pass</span>
+            <span class="n">request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialize_request</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+</pre></div>
+</div>
+<ol class="arabic">
+<li><p>views.LoginView.as_view()</p></li>
+<li><p>LoginView里面没有as_view方法，到父类APIView去找</p></li>
+<li><p>执行View里面的as_view()方法，返回view函数</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">view</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="bp">self</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">initkwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;get&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;head&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">head</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;request&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> instance has no &#39;request&#39; attribute. Did you override &quot;</span>
+            <span class="s2">&quot;setup() and forget to call super()?&quot;</span> <span class="o">%</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>url和视图函数之间的绑定关系建立完毕{“login”: view},等待用户请求</p></li>
+<li><p>接收到用户请求：login，到建立好的绑定关系里面执行对应的试图函数：view(request)</p></li>
+<li><p>视图函数的执行结果是什么就返回给用户什么：self.dispatch(),self.dispatch()的执行结果是什么，就返回给用户什么</p></li>
+<li><p>此时的self代表的是LoginView的实例化对象</p></li>
+<li><p>开始找dispatch方法，self里面没有，Login
+View里面也没有，在APIView里面有</p></li>
+<li><p>开始执行APIView里面的dispatch</p></li>
+<li><p>最后找到http方法（GET,POST,PUT,DELETE等），根据请求类型查找request.method.lower()</p></li>
+<li><p>开始执行找到的方法（GET），self.get()
+,self此时代表LoginView的实例化对象 11.1
+假设接收到的是POST请求，执行request.data 11.2
+根据分析，所有的解析工作都在request.data里面实现，且data是一个方法
+被装饰的（&#64;property）</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@property</span>
+<span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_full_data&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_load_data_and_files</span><span class="p">()</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_full_data</span>
+</pre></div>
+</div>
+<p>11.3 开始执行request.data，执行self._load_data_and_files</p>
+<p>11.4 执行<code class="docutils literal notranslate"><span class="pre">self._data</span></code>, <code class="docutils literal notranslate"><span class="pre">self._files</span></code> = self._parse()</p>
+<p>11.5 执行parser = self.negotiator.select_parser(self, self.parsers)</p>
+<p>11.6 self.parsers就是引用的parse_classes =
+api_settings.DEFAULT_PARSER_CLASSES
+(未找到变量执行``__getattr__``方法) 11.7 动态导入模块val =
+perform_import(val, attr)</p>
+<p>11.8 解析数据parsed = parser.parse(stream, media_type,
+self.parser_context)</p>
+<p>11.9 return (parsed.data, parsed.files)就是我们想要的数据</p>
+<p>11.10 DRF将<code class="docutils literal notranslate"><span class="pre">self._full_data</span></code> = <code class="docutils literal notranslate"><span class="pre">self._data</span></code></p>
+<p>11.11 request.date</p>
+</li>
+<li><p>在LoginView里面找到了对应的方法，执行改方法，最后返回给用户</p></li>
+</ol>
+<ul class="simple">
+<li><p><strong>DRF的所有功能都是在as_view()和dispatch里面重写的</strong></p></li>
+<li><p><strong>而解析器组件在dispatch方法里面重写的</strong></p></li>
+</ul>
+</div>
+<div class="section" id="id2">
+<h2>序列化组件<a class="headerlink" href="#id2" title="永久链接至标题">¶</a></h2>
+<table><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;tr&gt;
+    &lt;th&gt;主要内容&lt;/th&gt;
+    &lt;th&gt;小标题&lt;/th&gt;
+    &lt;th&gt;serializers&lt;/th&gt;
+    &lt;th&gt;ModelSerializer&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th rowspan=&#39;3&#39;&gt;field&lt;/th&gt;
+    &lt;th&gt;常用的field&lt;/th&gt;
+    &lt;th colspan=&#39;2&#39;&gt;CharField、BooleanField、IntegerField、DateTimeField&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th&gt;Core arguments&lt;/th&gt;
+    &lt;th colspan=&#39;2&#39;&gt;read_only、write_only、required、allow_null/allow_blank、lable、help_text、style&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th&gt;HiddenField&lt;/th&gt;
+    &lt;th colspan=&#39;2&#39;&gt;HiddenField的值不需要用户自己post数据过来，也不会显示返回给用户。配合CurrentUserDefault()可以实现获取到请求用户&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th rowspan=&#39;3&#39;&gt;save instance&lt;/th&gt;
+    &lt;th rowspan=&#39;3&#39;&gt;&lt;/th&gt;
+    &lt;th colspan=&#39;2&#39;&gt;serializer.save()，它会调用了serializer的create或update方法&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th&gt;当有post请求，需要重写serializer.create方法&lt;/th&gt;
+    &lt;th colspan=&#39;2&#39;&gt;ModelSerializer已经封装了这两个方法，如果额外自定义，也可以进行重载&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th&gt;当有patch请求，需要重写serializer.update方法&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th rowspan=&#39;3&#39;&gt;Validation自定义验证逻辑&lt;/th&gt;
+    &lt;th&gt;单独的validate&lt;/th&gt;
+    &lt;th colspan=&#39;2&#39;&gt;对某个字段进行自定义验证逻辑，重载valizte_+字段名&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th&gt;联合validate&lt;/th&gt;
+    &lt;th colspan=&#39;2&#39;&gt;重写validate()方法，对多个字段进行验证或者对read_only的字段进行操作&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th&gt;Validators&lt;/th&gt;
+    &lt;th colspan=&#39;2&#39;&gt;1.单独作用于某个field，作用于重载validate_+字段名相似。
+        2.UniqueValidator:指定某一个对象是唯一的，直接作用于某个field。
+        3.UniqueTogetherValidator:联合唯一，需要咋Meta属性中设置&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th rowspan=&#39;2&#39;&gt;ModelSerializer专属&lt;/th&gt;
+    &lt;th&gt;validate&lt;/th&gt;
+    &lt;th&gt;&lt;/th&gt;
+    &lt;th&gt;重载validate可以实现删除用户提交的字段，单改字段不存在指定model,避免save()出错&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th&gt;SerializerMethodField&lt;/th&gt;
+    &lt;th&gt;&lt;/th&gt;
+    &lt;th&gt;SerializerMethodField实现将model不存在字段或者获取不到的数据序列化返回给用户&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th rowspan=&#39;3&#39;&gt;外键的serializers&lt;/th&gt;
+    &lt;th rowspan=&#39;2&#39;&gt;正向&lt;/th&gt;
+    &lt;th&gt;PrimaryKeyRelatedField,不关心外键具体内容&lt;/th&gt;
+    &lt;th&gt;通过field已经映射，不关心外键具体内容&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th colspan=&#39;2&#39;&gt;嵌套serializer，获取外键具体内容&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+    &lt;th&gt;反向&lt;/th&gt;
+    &lt;th colspan=&#39;2&#39;&gt;Model设置related_name,通过related_name嵌套serializer&lt;/th&gt;
+&lt;/tr&gt;
+</pre></div>
+</div>
+</table><ol class="arabic">
+<li><p>Django原生serializers django.core.serializers</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.core.serializers</span> <span class="kn">import</span> <span class="n">serialize</span>
+<span class="k">class</span> <span class="nc">BookView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+<span class="n">serialized_data</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="s1">&#39;json&#39;</span><span class="p">,</span><span class="n">Course</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
+<span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">serialized_data</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>rest_framework serialzers</p></li>
+</ol>
+<ul class="simple">
+<li><p>需要手动插入数据（必须自定义create）</p></li>
+<li><p>手动序列化需要的字段</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># serializers.py</span>
+<span class="n">form</span> <span class="n">rest_framework</span> <span class="kn">import</span> <span class="nn">serializers</span>
+<span class="k">class</span> <span class="nc">BookSerializer</span><span class="p">(</span><span class="n">serializers</span><span class="o">.</span><span class="n">Serializer</span><span class="p">):</span>
+    <span class="n">publish_name</span> <span class="o">=</span> <span class="n">serializers</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;publish.name&#39;</span><span class="p">)</span>
+    <span class="n">authors_list</span> <span class="o">=</span> <span class="n">serializers</span><span class="o">.</span><span class="n">SerializerMethodField</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">get_authors_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">book_obj</span><span class="p">):</span>
+        <span class="n">authors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">author</span> <span class="ow">in</span> <span class="n">book_obj</span><span class="o">.</span><span class="n">authors</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+            <span class="n">authors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">author</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">authors</span>
+
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">slef</span><span class="p">,</span><span class="n">validated_data</span><span class="p">):</span>
+        <span class="n">validated_data</span><span class="p">[</span><span class="s1">&#39;publish_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;publish&#39;</span><span class="p">)</span>
+        <span class="n">book</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">validated_data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">book</span>
+
+
+<span class="c1"># view.py</span>
+<span class="k">class</span> <span class="nc">BookView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">):</span>
+        <span class="n">book_obj</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+        <span class="n">serialized_data</span> <span class="o">=</span> <span class="n">BookSerializer</span><span class="p">(</span><span class="n">book_obj</span><span class="p">,</span><span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">serialized_data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">):</span>
+        <span class="n">validated_data</span> <span class="o">=</span> <span class="n">BookSerializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">book</span> <span class="o">=</span> <span class="n">validated_data</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="n">authors</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">nid_in</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;authors&#39;</span><span class="p">])</span>
+            <span class="n">book</span><span class="o">.</span><span class="n">authors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">*</span><span class="n">authors</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">validated_data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">validated_data</span><span class="o">.</span><span class="n">errors</span><span class="p">)</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>为了解决上面的问题，我们建议使用serializers.ModelSerializer</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># serializers.py</span>
+<span class="k">class</span> <span class="nc">BookSerializer</span><span class="p">(</span><span class="n">serializers</span><span class="o">.</span><span class="n">ModelSerializer</span><span class="p">):</span>
+    <span class="c1"># 外键字段显示__str__方法的返回值</span>
+    <span class="n">publish_name</span> <span class="o">=</span> <span class="n">serializers</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;publish.name&#39;</span><span class="p">)</span>
+    <span class="n">authors_list</span> <span class="o">=</span> <span class="n">serializers</span><span class="o">.</span><span class="n">SerializerMethodField</span><span class="p">()</span>
+
+    <span class="c1"># 多对多字段需要自己手动获取数据</span>
+    <span class="k">def</span> <span class="nf">get_authors_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">book_obj</span><span class="p">):</span>
+        <span class="n">authors</span> <span class="o">=</span><span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">author</span> <span class="ow">in</span> <span class="n">bokk_obj</span><span class="o">.</span><span class="n">authors</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="n">authors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">author</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">authors</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Book</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;field_name&#39;</span><span class="p">,}</span> <span class="c1">#&#39;__all__&#39;</span>
+        <span class="n">extra_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;publish&#39;</span><span class="p">:{</span><span class="s2">&quot;write_only&quot;</span><span class="p">:</span><span class="kc">True</span><span class="p">},}</span>
+<span class="c1"># view.py</span>
+<span class="k">class</span> <span class="nc">BookFilterView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">,</span><span class="n">nid</span><span class="p">):</span>
+        <span class="n">book_obj</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">nid</span><span class="p">)</span>
+
+        <span class="n">serialized_data</span> <span class="o">=</span> <span class="n">BookSerializer</span><span class="p">(</span><span class="n">book_obj</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">serialized_data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">,</span><span class="n">nid</span><span class="p">):</span>
+
+        <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">nid</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">Response</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">,</span><span class="n">nid</span><span class="p">):</span>
+        <span class="n">book_obj</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">nid</span><span class="p">)</span>
+
+        <span class="n">verified_data</span> <span class="o">=</span> <span class="n">BookSerializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">book_obj</span><span class="p">,</span><span class="n">many</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">verified_data</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">verified_data</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">verified_data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">verified_data</span><span class="o">.</span><span class="n">errors</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id3">
+<h2>视图组件<a class="headerlink" href="#id3" title="永久链接至标题">¶</a></h2>
+<ol class="arabic simple">
+<li><p>导入<strong>mixin</strong>： form rest_framework.mixins</p></li>
+</ol>
+<ul class="simple">
+<li><p>ListModelMixin</p></li>
+<li><p>CreateModelMixin</p></li>
+<li><p>RetrieveModelMixin</p></li>
+<li><p>UpdateModelMixin</p></li>
+<li><p>DestroyModelMixin</p></li>
+</ul>
+<ol class="arabic simple" start="2">
+<li><p>mixin源码剖析</p></li>
+</ol>
+<ul class="simple">
+<li><p>Django程序启动，开始初始化，读取url.py settings,读取视图类</p></li>
+<li><p>执行as_view() BookView没有，需要到父类中找</p></li>
+<li><p>几个ModelMixin也没有，GenericAPIView没有，GenericAPIView(APIView)中找</p></li>
+<li><p>找到了，并且与之前的逻辑是一样的，同时我们发现GenericAPIView中定义了查找queryset和serialzer_class类的方法</p></li>
+<li><p>as_view()方法返回重新封装的视图函数，开始建立url和视图函数之间的映射关系</p></li>
+<li><p>等待用户请求</p></li>
+<li><p>接收到用户请求，根据url找到视图函数</p></li>
+<li><p>执行视图函数的dispatch方法(因为视图函数的返回值是return
+self.dispatch())</p></li>
+<li><p>dispatch分发请i去，茶轴打哦试图类的五个方法中的其中一个</p></li>
+<li><p>开始执行比如post请求，返回self.create()，视图类本身没有，则会去父类中查找</p></li>
+<li><p>最后在CreateModelMixin中找到</p></li>
+<li><p>执行create()方法，获取qureyset和serializer_class</p></li>
+<li><p>返回数据</p></li>
+</ul>
+<ol class="arabic simple" start="3">
+<li><p>导入<strong>GenericAPIView</strong>: form rest_framework.generics</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">BookView</span><span class="p">(</span><span class="n">ListModelMixin</span><span class="p">,</span><span class="n">CreateModelMixin</span><span class="p">,</span><span class="n">GenericAPIView</span><span class="p">):</span>
+       <span class="n">queryset</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+       <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">BookSerializer</span>
+       <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+               <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+       <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+               <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
+   <span class="k">class</span> <span class="nc">BookFilterView</span><span class="p">(</span><span class="n">RetrieveModelMixin</span><span class="p">,</span><span class="n">DestroyModelMixin</span><span class="p">,</span><span class="n">UpdateModelMixin</span><span class="p">,</span><span class="n">GenericAPIView</span><span class="p">):</span>
+       <span class="n">queryset</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+       <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">BookSerializer</span>
+       <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+           <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+       <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+           <span class="k">return</span> <span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+       <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+           <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">destroy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+<ol class="arabic" start="4">
+<li><p>封装合并view from rest_framework import generics</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">BookView</span><span class="p">(</span><span class="n">generics</span><span class="o">.</span><span class="n">ListCreateAPIView</span><span class="p">):</span>
+    <span class="n">queryset</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">BookSerializer</span>
+<span class="k">class</span> <span class="nc">BookFilterView</span><span class="p">(</span><span class="n">generics</span><span class="o">.</span><span class="n">RetrieveUpdateDestroyAPIView</span><span class="p">):</span>
+    <span class="n">queryset</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">BookSerializer</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>ViewSet</strong> from rest_framework.ViewSets import ModelViewSet</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># url.py</span>
+<span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+<span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;books/$&#39;</span><span class="p">,</span> <span class="n">view</span><span class="o">.</span><span class="n">BooksViewSet</span><span class="o">.</span><span class="n">as_view</span><span class="p">({</span>
+    <span class="s1">&#39;get&#39;</span><span class="p">:</span><span class="s1">&#39;list&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;post&#39;</span><span class="p">:</span><span class="s1">&#39;create&#39;</span>
+<span class="p">})),</span>
+<span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;books/(?P&lt;pk&gt;\d+)/$&#39;</span><span class="p">,</span> <span class="n">view</span><span class="o">.</span><span class="n">BooksViewSet</span><span class="o">.</span><span class="n">as_view</span><span class="p">({</span>
+    <span class="s1">&#39;get&#39;</span><span class="p">:</span><span class="s1">&#39;retrieve&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;put&#39;</span><span class="p">:</span><span class="s1">&#39;update&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;delete&#39;</span><span class="p">:</span><span class="s1">&#39;destroy&#39;</span>
+<span class="p">})),</span>
+<span class="p">]</span>
+<span class="c1"># view.py</span>
+<span class="k">class</span> <span class="nc">BooksViewSet</span><span class="p">(</span><span class="n">ModelViewSet</span><span class="p">):</span>
+<span class="n">queryset</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="n">serializer_class</span> <span class="o">=</span> <span class="n">BookSerializer</span>
+</pre></div>
+</div>
+</li>
+<li><p>viewset源码剖析</p></li>
+</ol>
+<ul>
+<li><p>Django程序启动，开始初始化，读取urls.py settings、读取视图类</p></li>
+<li><p>执行as_view()BookViewSet没有，需要到父类(ModelViewSet)中找</p></li>
+<li><p>ModelViewSet继承了mixins的几个ModelMixin和GenericViewSet,显然ModelMixin也没有，只有GenericViewSet中有</p></li>
+<li><p>GenericViewSet没有任何代码，只继承了ViewSetMixin和generics
+GenericAPIView</p></li>
+<li><p>继续去ViewSetMixin中查找，找到as_view类方法，在重新封装view函数的过程中，有一个self.action_map
+= actions</p></li>
+<li><p>这个actions就是我们给as_view()传递的参数</p></li>
+<li><p>绑定url和属兔函数actions之间的映射关系</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">action_map</span> <span class="o">=</span> <span class="n">actions</span>
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">action</span> <span class="ow">in</span> <span class="n">actions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<span class="n">handler</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
+<span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">handler</span><span class="p">)</span>
+<span class="c1"># setattr(self,&#39;get&#39;,self.list)</span>
+<span class="c1"># setattr(self,&#39;post&#39;,self.create)</span>
+<span class="c1"># setattr(self,&#39;get&#39;,self.retrieve)</span>
+<span class="c1"># setattr(self,&#39;put&#39;,self.update)</span>
+<span class="c1"># setattr(self,&#39;delete&#39;,self.destroy)</span>
+</pre></div>
+</div>
+</li>
+<li><p>等待用户请求</p></li>
+<li><p>接收到用户请求，根据url找到视图函数</p></li>
+<li><p>执行视图函数的dispatch()方法（因为视图函数的返回值是：return
+self.dispatch()）</p></li>
+<li><p>dispatch分发请求，找到视图类的五个方法中的其中一个</p></li>
+<li><p>开始执行，比如post请求，返回self.create(),视图类本身没有，则回到父类中查找</p></li>
+<li><p>最后在CreateModelMixin中查找到</p></li>
+<li><p>执行create()方法，获取queryset和serializer_class</p></li>
+<li><p>返回数据</p></li>
+</ul>
+<ol class="arabic" start="5">
+<li><p>视图继承图 ```mermaid graph TD</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ModelViewSet</span><span class="o">--&gt;</span><span class="n">CreateModelMixin</span>
+<span class="n">ModelViewSet</span><span class="o">--&gt;</span><span class="n">RetrieveModelMixin</span>
+<span class="n">ModelViewSet</span><span class="o">--&gt;</span><span class="n">UpdatelMixin</span>
+<span class="n">ModelViewSet</span><span class="o">--&gt;</span><span class="n">DestroyModelMixin</span>
+<span class="n">ModelViewSet</span><span class="o">--&gt;</span><span class="n">ListModelMixin</span>
+<span class="n">ReadOnlyModelViewSet</span><span class="o">--&gt;</span><span class="n">ListModelMixin</span>
+<span class="n">ReadOnlyModelViewSet</span><span class="o">--&gt;</span><span class="n">GenericViewSet</span>
+<span class="n">ReadOnlyModelViewSet</span><span class="o">--&gt;</span><span class="n">RetrieveModelMixin</span>
+<span class="n">GenericViewSet</span><span class="o">--&gt;</span><span class="n">GenericAPIView</span><span class="o">--&gt;</span><span class="n">APIView</span><span class="o">--&gt;</span><span class="n">View</span>
+<span class="n">GenericViewSet</span><span class="o">--&gt;</span><span class="n">ViewSetMixin</span>
+<span class="n">ViewSet</span><span class="o">--&gt;</span><span class="n">APIView</span>
+<span class="n">ViewSet</span><span class="o">--&gt;</span><span class="n">ViewSetMixin</span>
+</pre></div>
+</div>
+<p>```</p>
+</li>
+</ol>
+</div>
+<div class="section" id="id4">
+<h2>认证组件<a class="headerlink" href="#id4" title="永久链接至标题">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 定义认证类</span>
+<span class="k">class</span> <span class="nc">UserAuth</span><span class="p">(</span><span class="n">BaseAuthentication</span><span class="p">):</span>
+    <span class="c1">#def authenticate_header(self, request):</span>
+    <span class="c1">#    pass</span>
+    <span class="k">def</span> <span class="nf">authenticate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">user_token</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">query_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;token&#39;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="n">UserToken</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">token</span><span class="o">=</span><span class="n">user_token</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">token</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">,</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">APIException</span><span class="p">(</span><span class="s1">&#39;没有认证&#39;</span><span class="p">)</span>
+<span class="c1"># 在需要认证的数据接口指定认证类</span>
+<span class="n">authentication_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">UserAuth</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>源码解剖分析 多个认证类请在最后一个认证类返回值</p>
+<ol class="arabic">
+<li><p>self.dispatch() #self BookView 的实例化对象</p></li>
+<li><p>self.initial() #self BookView 的实例化对象</p></li>
+<li><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">perform_authentication</span><span class="p">()</span> <span class="c1">#self BookView 的实例化对象</span>
+</pre></div>
+</div>
+</li>
+<li><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">request</span><span class="o">.</span><span class="n">user</span>              <span class="c1"># self Request的实例化对象</span>
+</pre></div>
+</div>
+</li>
+<li><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">_authentiacte</span><span class="p">()</span>
+</pre></div>
+</div>
+</li>
+<li><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">auth</span> <span class="o">=</span> <span class="n">user_auth_tuple</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<p>全局认证</p>
+<ul class="simple">
+<li><p>settings文件里面指定</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">REST_FRAMEWORK</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;DEFAULT_AUTHENTICATION_CLASSES&quot;</span><span class="p">:(</span>
+    <span class="s2">&quot;utils.app_authes.UserAuth&quot;</span>
+    <span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>DRF 认证类</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rest_framework.authentication</span> <span class="kn">import</span> <span class="n">TokenAuthentication</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id5">
+<h2>权限组件<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h2>
+<ol class="arabic simple">
+<li><p>权限组件的使用</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 定义权限类</span>
+<span class="k">class</span> <span class="nc">UserPerm</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">has_permission</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">,</span><span class="n">view</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">has</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+<span class="c1"># 指定权限类</span>
+<span class="k">class</span> <span class="nc">BookView</span><span class="p">(</span><span class="n">ModelViewSet</span><span class="p">):</span>
+    <span class="n">permission_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">UserPerm</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>DRF的权限类</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rest_framework.permissions</span> <span class="kn">import</span> <span class="n">IsAuthenticated</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id6">
+<h2>频率组件<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 定义频率类</span>
+<span class="k">class</span> <span class="nc">RateThrottle</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">allow_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">allow</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+<span class="k">class</span> <span class="nc">BookView</span><span class="p">(</span><span class="n">ModelViewSet</span><span class="p">):</span>
+    <span class="n">throttle_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">RateThrottle</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>全局配置</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">RateThrottle</span><span class="p">(</span><span class="n">SimpleRateThrottle</span><span class="p">):</span>
+    <span class="n">scope</span> <span class="o">=</span> <span class="s1">&#39;visit_rate&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_cache_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">,</span><span class="n">view</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ident</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>      <span class="c1">#获取IP地址</span>
+
+<span class="c1"># settings.py</span>
+<span class="n">REST_FRAMEWORK</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;DEFAULT_THROTTLE_CLASSES&quot;</span><span class="p">:(</span><span class="s1">&#39;utils.app_throttles.RateThrottle&#39;</span><span class="p">,),</span>
+    <span class="s2">&quot;DEFAULT_THROTTLE_RATES&quot;</span><span class="p">:{</span>
+        <span class="s2">&quot;visit_rate&quot;</span><span class="p">:</span><span class="s2">&quot;15/m&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>DRF的频率类</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rest_framework.throttling</span> <span class="kn">import</span> <span class="n">SimpleRateThrottle</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="url">
+<h2>url 注册器组件<a class="headerlink" href="#url" title="永久链接至标题">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span># 导入模块
+import rest_framework import routers
+# 生成一个注册器实列对象
+router = routers.DefaultRouter()
+# 开始生成url
+router.register(r&#39;books&#39;, views.BookView, base_name=&#39;Book&#39;)
+urlpatterns = [···]
+urlpatterns += router.urls
+</pre></div>
+</div>
+</div>
+<div class="section" id="id7">
+<h2>响应器组件<a class="headerlink" href="#id7" title="永久链接至标题">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rest_framework.renderers</span> <span class="kn">import</span> <span class="n">JsonRenderer</span><span class="p">,</span><span class="n">BrowsableAPIRenderer</span>
+
+<span class="n">renderer_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">JsonRenderer</span><span class="p">,</span><span class="n">BrowsableAPIRenderer</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id8">
+<h2>分页器组件<a class="headerlink" href="#id8" title="永久链接至标题">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 导入模块</span>
+<span class="kn">from</span> <span class="nn">rest_framework.pagination</span> <span class="kn">import</span> <span class="n">PageNumberPagination</span>
+
+<span class="k">class</span> <span class="nc">BookView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">request</span><span class="p">):</span>
+        <span class="c1"># 获取数据</span>
+        <span class="n">books</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="c1"># 创建分页器</span>
+        <span class="n">paginater</span> <span class="o">=</span> <span class="n">PageNumberPagination</span><span class="p">()</span>
+        <span class="c1"># 开始分页</span>
+        <span class="n">paged_books</span> <span class="o">=</span> <span class="n">paginater</span><span class="o">.</span><span class="n">paginate_queryset</span><span class="p">(</span><span class="n">books</span><span class="p">,</span><span class="n">request</span><span class="p">)</span>
+        <span class="c1"># 序列化</span>
+        <span class="n">serialized_books</span> <span class="o">=</span> <span class="n">BookSerializer</span><span class="p">(</span><span class="n">paged_books</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># 返回数据</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">serialized_books</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">BooksPagination</span><span class="p">(</span><span class="n">PageNumberPagination</span><span class="p">):</span>
+    <span class="n">page_size</span> <span class="o">=</span> <span class="mi">12</span>
+    <span class="n">page_size_query_param</span> <span class="o">=</span> <span class="s1">&#39;page_size&#39;</span>
+    <span class="n">page_query_param</span> <span class="o">=</span> <span class="s1">&#39;page&#39;</span>
+    <span class="n">max_page_size</span> <span class="o">=</span> <span class="mi">20</span>
+
+
+<span class="k">class</span> <span class="nc">BookView</span><span class="p">(</span><span class="n">ModelViewSet</span><span class="p">):</span>
+    <span class="n">pagination_class</span> <span class="o">=</span> <span class="n">GoodsPagination</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="django-contenttype">
+<h2>Django ContentType<a class="headerlink" href="#django-contenttype" title="永久链接至标题">¶</a></h2>
+<ul class="simple">
+<li><p>在model中定义ForeignKey字段，并关联到ContentType表。通常这个字段命名为“content_type”</p></li>
+<li><p>在model中定义PositiveIntegerField字段，用来存储关联表中的主键。通常这个字段命名为“object_id”</p></li>
+<li><p>在model中定义GenericForeignKey字段，传入上述两个字段的名字。</p></li>
+</ul>
+<p>.model_class() 表示ContentType表model字段 的类
+注意：ContentType只运用于1对多的关系！！！并且多的那张表中有多个ForeignKey字段。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Electrics</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+    <span class="n">price</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">coupons</span> <span class="o">=</span> <span class="n">GenericRelation</span><span class="p">(</span><span class="n">to</span><span class="o">=</span><span class="s1">&#39;Coupon&#39;</span><span class="p">)</span>  <span class="c1"># 用于反向查询，不会生成表字段</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+<span class="k">class</span> <span class="nc">Coupon</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Coupon</span>
+<span class="sd">    id    name                       content_type_id       object_id_id</span>
+<span class="sd">    1     美的满减优惠券               9（电器表electrics）    3</span>
+<span class="sd">    2     猪蹄买一送一优惠券           10                     2</span>
+<span class="sd">    3     南极被子买200减50优惠券      11                     1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+
+    <span class="n">content_type</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">to</span><span class="o">=</span><span class="n">ContentType</span><span class="p">)</span> <span class="c1"># step 1</span>
+    <span class="n">object_id</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">PositiveIntegerField</span><span class="p">()</span> <span class="c1"># step 2</span>
+    <span class="n">content_object</span> <span class="o">=</span> <span class="n">GenericForeignKey</span><span class="p">(</span><span class="s1">&#39;content_type&#39;</span><span class="p">,</span> <span class="s1">&#39;object_id&#39;</span><span class="p">)</span> <span class="c1"># step 3</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="django-forms-modelform">
+<h2>Django Forms 和modelForm<a class="headerlink" href="#django-forms-modelform" title="永久链接至标题">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">py</span>
+<span class="k">class</span> <span class="nc">Book</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">title</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+    <span class="n">price</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">DecimalField</span><span class="p">(</span><span class="n">max_digits</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span><span class="n">decimal_places</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">pub_date</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">DateField</span><span class="p">()</span>
+    <span class="n">publish</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;Publish&quot;</span><span class="p">)</span>
+    <span class="n">authors</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">ManyToManyField</span><span class="p">(</span><span class="s2">&quot;Author&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span>
+
+<span class="n">forms</span><span class="o">.</span><span class="n">py</span>
+<span class="c1">#Modelform将一个model转化成一个form组件</span>
+<span class="k">class</span> <span class="nc">BookModelForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+     <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">Book</span>
+        <span class="n">fields</span><span class="o">=</span><span class="s2">&quot;__all__&quot;</span>
+<span class="n">这一步做的事情相当于下面的代码</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">class BookModelForm(form.Form):</span>
+<span class="sd">     title=forms.CharField(max_length=32)</span>
+<span class="sd">     price=forms.IntegerField()</span>
+<span class="sd">     pub_date=forms.DateField()</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="stark">
+<h2>stark 组件<a class="headerlink" href="#stark" title="永久链接至标题">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Li's BLOG</a></h1>
+
+
+
+
+
+
+
+
+<h3>导航</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html">Ubuntu 18.04 server 修改 apt 软件源为阿里云的源</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#root">设置root密码</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#xshell">xshell上传下载文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#id1">安装压缩包</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#scp">scp传输文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#id2">配置桌面快捷方式</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#gnome">安装GNOME桌面</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#python">安装Python虚拟环境</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#id3">查看端口</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#id4">防火墙</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#linux">linux 字符编码</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#dns">DNS 配置文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#blog">创建自己的BLOG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#id5">Linux 定时任务</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#mysql">mysql安装</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#redis">安装Redis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#mongodb">安装MongoDB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#nginx">Nginx</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#nodejsnpm">安装nodejs、npm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#git-clone">git clone 提速</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ubuntu_18.04_server.html#systemback-ios">安装 systemback 备份IOS镜像</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">django restframework</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#apiview">APIView</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">解析器组件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">序列化组件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">视图组件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">认证组件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">权限组件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id6">频率组件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#url">url 注册器组件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id7">响应器组件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id8">分页器组件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#django-contenttype">Django ContentType</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#django-forms-modelform">Django Forms 和modelForm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stark">stark 组件</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="Ubuntu_18.04_server.html" title="上一章">Ubuntu 18.04 server 修改 apt 软件源为阿里云的源</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="转向" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, LHM.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/django_restframework.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
