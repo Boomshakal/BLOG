@@ -1,36 +1,199 @@
 
-<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml" lang="zh_CN">
-  <head>
-    <meta charset="utf-8" />
-    <title>Ubuntu 18.04 server 修改 apt 软件源为阿里云的源 &#8212; Li&#39;s BLOG 1.0 文档</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
-    <script src="_static/translations.js"></script>
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="zh-CN" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="zh-CN" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Ubuntu 18.04 server 修改 apt 软件源为阿里云的源 &mdash; Li&#39;s BLOG 1.0 文档</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script src="_static/translations.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="index" title="索引" href="genindex.html" />
     <link rel="search" title="搜索" href="search.html" />
-    <link rel="prev" title="Welcome to Li’s BLOG’s documentation!" href="index.html" />
+    <link rel="next" title="django restframework" href="django_restframework.html" />
+    <link rel="prev" title="Welcome to Li’s BLOG’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
    
-  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
-  </head><body>
-  
-
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
           
 
-          <div class="body" role="main">
+          
+            <a href="index.html" class="icon icon-home"> Li's BLOG
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Ubuntu 18.04 server 修改 apt 软件源为阿里云的源</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#root">设置root密码</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#xshell">xshell上传下载文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id1">安装压缩包</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#scp">scp传输文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id2">配置桌面快捷方式</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#gnome">安装GNOME桌面</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#python">安装Python虚拟环境</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id3">查看端口</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id4">防火墙</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#linux">linux 字符编码</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#dns">DNS 配置文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#blog">创建自己的BLOG</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#sphinx">Sphinx生成网页</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#markdown">Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pandoc">Pandoc格式转换</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#id5">Linux 定时任务</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#mysql">mysql安装</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id6">mysql数据备份与恢复</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id7">mysql主从复制</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#redis">安装Redis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id8">redis 持久化与发布订阅</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id9">发布订阅</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id10">持久化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#redisrdbaof">redis不重启之rdb数据切换到aof数据</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id11">redis 主从同步</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id12">手动切换主从关系</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#redis-redis-sentinel">redis哨兵 Redis-Sentinel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#redis-redis-cluster">Redis集群 redis-cluster</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#mongodb">安装MongoDB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#nginx">Nginx</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#nodejsnpm">安装nodejs、npm</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#git-clone">git clone 提速</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#systemback-ios">安装 systemback 备份IOS镜像</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#systemback4gubuntu">Systemback制作大于4G的Ubuntu系统镜像</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="django_restframework.html">django restframework</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Li's BLOG</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Ubuntu 18.04 server 修改 apt 软件源为阿里云的源</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/Ubuntu_18.04_server.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   <div class="section" id="ubuntu-18-04-server-apt">
 <h1>Ubuntu 18.04 server 修改 apt 软件源为阿里云的源<a class="headerlink" href="#ubuntu-18-04-server-apt" title="永久链接至标题">¶</a></h1>
@@ -1256,109 +1419,52 @@ sudo make install
 </div>
 
 
+           </div>
+           
           </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="index.html">Li's BLOG</a></h1>
-
-
-
-
-
-
-
-
-<h3>导航</h3>
-<p class="caption"><span class="caption-text">Contents:</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Ubuntu 18.04 server 修改 apt 软件源为阿里云的源</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#root">设置root密码</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#xshell">xshell上传下载文件</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id1">安装压缩包</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#scp">scp传输文件</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id2">配置桌面快捷方式</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#gnome">安装GNOME桌面</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#python">安装Python虚拟环境</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id3">查看端口</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id4">防火墙</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#linux">linux 字符编码</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#dns">DNS 配置文件</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#blog">创建自己的BLOG</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#sphinx">Sphinx生成网页</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#markdown">Markdown</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pandoc">Pandoc格式转换</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="#id5">Linux 定时任务</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#mysql">mysql安装</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id6">mysql数据备份与恢复</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id7">mysql主从复制</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="#redis">安装Redis</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id8">redis 持久化与发布订阅</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id11">redis 主从同步</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#redis-redis-sentinel">redis哨兵 Redis-Sentinel</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#redis-redis-cluster">Redis集群 redis-cluster</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="#mongodb">安装MongoDB</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#nginx">Nginx</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#nodejsnpm">安装nodejs、npm</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#git-clone">git clone 提速</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#systemback-ios">安装 systemback 备份IOS镜像</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#systemback4gubuntu">Systemback制作大于4G的Ubuntu系统镜像</a></li>
-</ul>
-</li>
-</ul>
-
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="上一章">Welcome to Li’s BLOG’s documentation!</a></li>
-  </ul></li>
-</ul>
-</div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">快速搜索</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="转向" />
-    </form>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="django_restframework.html" class="btn btn-neutral float-right" title="django restframework" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Li’s BLOG’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
     </div>
-</div>
-<script>$('#searchbox').show(0);</script>
+  
 
+  <hr/>
 
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, LHM
 
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
-
-
-
+</footer>
 
         </div>
       </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2020, LHM.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
-      
-      |
-      <a href="_sources/Ubuntu_18.04_server.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
     
-  </body>
+   
+
+</body>
 </html>
