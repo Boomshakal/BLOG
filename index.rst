@@ -10,11 +10,4 @@ Welcome to Li's BLOG's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   how_to_be_a_rich_man
-
-ndices and tables
-==================
-
-  * :ref:`genindex`
-  * :ref:`modindex`
-  * :ref:`search`
+   Ubuntu_18.04_server
