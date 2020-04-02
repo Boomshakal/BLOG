@@ -1377,16 +1377,33 @@ server <span class="o">{</span>
 <li><p>轮巡</p></li>
 <li><p>weight 权重</p></li>
 </ul>
-<p><code class="docutils literal notranslate"><span class="pre">shell</span>&#160;&#160;&#160; <span class="pre">upstream</span> <span class="pre">django</span> <span class="pre">{</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.10:8000</span> <span class="pre">weight=5;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.11:9000</span> <span class="pre">weight=10;#这个节点访问比率是大于8000的</span>&#160;&#160;&#160; <span class="pre">}</span></code></p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>upstream django <span class="o">{</span>
+       server <span class="m">10</span>.0.0.10:8000 <span class="nv">weight</span><span class="o">=</span><span class="m">5</span><span class="p">;</span>
+       server <span class="m">10</span>.0.0.11:9000 <span class="nv">weight</span><span class="o">=</span><span class="m">10</span><span class="p">;</span><span class="c1">#这个节点访问比率是大于8000的</span>
+<span class="o">}</span>
+</pre></div>
+</div>
 <ul class="simple">
 <li><p>ip_hash 不能和</p></li>
 </ul>
-<p><code class="docutils literal notranslate"><span class="pre">shell</span>&#160;&#160;&#160; <span class="pre">upstream</span> <span class="pre">django</span> <span class="pre">{</span>&#160;&#160;&#160; <span class="pre">　　　　ip_hash;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.10:8000;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.11:9000;</span>&#160;&#160;&#160; <span class="pre">}</span></code></p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>upstream django <span class="o">{</span>
+　　　　ip_hash<span class="p">;</span>
+       server <span class="m">10</span>.0.0.10:8000<span class="p">;</span>
+       server <span class="m">10</span>.0.0.11:9000<span class="p">;</span>
+<span class="o">}</span>
+</pre></div>
+</div>
 <ul class="simple">
 <li><p>backup
 在非backup机器繁忙或者宕机时，请求backup机器，因此机器默认压力最小</p></li>
 </ul>
-<p><code class="docutils literal notranslate"><span class="pre">shell</span>&#160;&#160;&#160; <span class="pre">upstream</span> <span class="pre">django</span> <span class="pre">{</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.10:8000</span> <span class="pre">weight=5;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.11:9000;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.12:8080</span> <span class="pre">backup;</span>&#160;&#160;&#160; <span class="pre">}</span></code></p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>upstream django <span class="o">{</span>
+       server <span class="m">10</span>.0.0.10:8000 <span class="nv">weight</span><span class="o">=</span><span class="m">5</span><span class="p">;</span>
+       server <span class="m">10</span>.0.0.11:9000<span class="p">;</span>
+       server <span class="m">10</span>.0.0.12:8080 backup<span class="p">;</span>
+<span class="o">}</span>
+</pre></div>
+</div>
 </div>
 </div>
 <div class="section" id="nodejsnpm">

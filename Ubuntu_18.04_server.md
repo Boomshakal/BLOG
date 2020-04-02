@@ -1234,32 +1234,32 @@ server {
    - 轮巡
    - weight 权重
 
-   ```shell
-   upstream django {
-          server 10.0.0.10:8000 weight=5;
-          server 10.0.0.11:9000 weight=10;#这个节点访问比率是大于8000的
-   }
-   ```
+```shell
+upstream django {
+       server 10.0.0.10:8000 weight=5;
+       server 10.0.0.11:9000 weight=10;#这个节点访问比率是大于8000的
+}
+```
 
    - ip_hash 不能和
 
-   ```shell
-   upstream django {
-   　　　　ip_hash;
-          server 10.0.0.10:8000;
-          server 10.0.0.11:9000;
-   }
-   ```
+```shell
+upstream django {
+　　　　ip_hash;
+       server 10.0.0.10:8000;
+       server 10.0.0.11:9000;
+}
+```
 
    - backup  在非backup机器繁忙或者宕机时，请求backup机器，因此机器默认压力最小
 
-   ```shell
-   upstream django {
-          server 10.0.0.10:8000 weight=5;
-          server 10.0.0.11:9000;
-          server 10.0.0.12:8080 backup;
-   }
-   ```
+```shell
+upstream django {
+       server 10.0.0.10:8000 weight=5;
+       server 10.0.0.11:9000;
+       server 10.0.0.12:8080 backup;
+}
+```
 
    
 
