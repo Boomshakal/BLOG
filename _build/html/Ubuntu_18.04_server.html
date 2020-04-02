@@ -98,24 +98,25 @@
 <li class="toctree-l1"><a class="reference internal" href="#blog">创建自己的BLOG</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#sphinx">Sphinx生成网页</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#markdown">Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">修改主题</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pandoc">Pandoc格式转换</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="#id5">Linux 定时任务</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id6">Linux 定时任务</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#mysql">mysql安装</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id6">mysql数据备份与恢复</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id7">mysql主从复制</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id7">mysql数据备份与恢复</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id8">mysql主从复制</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#redis">安装Redis</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id8">redis 持久化与发布订阅</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id9">发布订阅</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#id10">持久化</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id9">redis 持久化与发布订阅</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id10">发布订阅</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id11">持久化</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#redisrdbaof">redis不重启之rdb数据切换到aof数据</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#id11">redis 主从同步</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id12">手动切换主从关系</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id12">redis 主从同步</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id13">手动切换主从关系</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#redis-redis-sentinel">redis哨兵 Redis-Sentinel</a></li>
@@ -123,7 +124,11 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#mongodb">安装MongoDB</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#nginx">Nginx</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#nginx">Nginx</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id14">Nginx反向代理</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id15">Nginx负载均衡</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="#nodejsnpm">安装nodejs、npm</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#git-clone">git clone 提速</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#systemback-ios">安装 systemback 备份IOS镜像</a><ul>
@@ -496,6 +501,15 @@ make html
 </pre></div>
 </div>
 </div>
+<div class="section" id="id5">
+<h2>修改主题<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>import sphinx_rtd_theme
+
+<span class="nv">html_theme</span> <span class="o">=</span> <span class="s1">&#39;sphinx_rtd_theme&#39;</span>
+<span class="nv">html_theme_path</span> <span class="o">=</span> <span class="o">[</span>sphinx_rtd_theme.get_html_theme_path<span class="o">()]</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="pandoc">
 <h2>Pandoc格式转换<a class="headerlink" href="#pandoc" title="永久链接至标题">¶</a></h2>
 <p>markdown文件转换rst</p>
@@ -504,8 +518,8 @@ make html
 </div>
 </div>
 </div>
-<div class="section" id="id5">
-<h1>Linux 定时任务<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h1>
+<div class="section" id="id6">
+<h1>Linux 定时任务<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h1>
 <ol class="arabic">
 <li><p>查看crontab crontab -l</p></li>
 <li><p>编辑crontab crontab -e</p></li>
@@ -613,8 +627,8 @@ grant all privileges on *.* to root@<span class="s1">&#39;%&#39;</span>  identif
 flush privileges<span class="p">;</span>
 </pre></div>
 </div>
-<div class="section" id="id6">
-<h2>mysql数据备份与恢复<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id7">
+<h2>mysql数据备份与恢复<a class="headerlink" href="#id7" title="永久链接至标题">¶</a></h2>
 <ol class="arabic simple">
 <li><p>导出数据库</p></li>
 </ol>
@@ -634,8 +648,8 @@ flush privileges<span class="p">;</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id7">
-<h2>mysql主从复制<a class="headerlink" href="#id7" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id8">
+<h2>mysql主从复制<a class="headerlink" href="#id8" title="永久链接至标题">¶</a></h2>
 <ol class="arabic simple">
 <li><p>设置master主库的配置文件</p></li>
 </ol>
@@ -778,10 +792,10 @@ redis-cli -p <span class="m">6380</span> -a P@ssw0rd
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo grep -v <span class="s2">&quot;^#&quot;</span> /etc/redis/redis.conf <span class="p">|</span> grep -v <span class="s2">&quot;^</span>$<span class="s2">&quot;</span>
 </pre></div>
 </div>
-<div class="section" id="id8">
-<h2>redis 持久化与发布订阅<a class="headerlink" href="#id8" title="永久链接至标题">¶</a></h2>
 <div class="section" id="id9">
-<h3>发布订阅<a class="headerlink" href="#id9" title="永久链接至标题">¶</a></h3>
+<h2>redis 持久化与发布订阅<a class="headerlink" href="#id9" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id10">
+<h3>发布订阅<a class="headerlink" href="#id10" title="永久链接至标题">¶</a></h3>
 <ul class="simple">
 <li><p>发布者 PUBLISH PUBLISH music reidslearn 给频道music发布消息</p></li>
 <li><p>接受者 SUBSCRIBE SUBSCRIBE music 订阅music频道 PSUBSCRIBE 频道*
@@ -789,8 +803,8 @@ redis-cli -p <span class="m">6380</span> -a P@ssw0rd
 <li><p>频道 music</p></li>
 </ul>
 </div>
-<div class="section" id="id10">
-<h3>持久化<a class="headerlink" href="#id10" title="永久链接至标题">¶</a></h3>
+<div class="section" id="id11">
+<h3>持久化<a class="headerlink" href="#id11" title="永久链接至标题">¶</a></h3>
 <ul class="simple">
 <li><p>RDB持久化(数据快照)</p></li>
 </ul>
@@ -865,8 +879,8 @@ redis-server rdb.conf
 </div>
 </div>
 </div>
-<div class="section" id="id11">
-<h2>redis 主从同步<a class="headerlink" href="#id11" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id12">
+<h2>redis 主从同步<a class="headerlink" href="#id12" title="永久链接至标题">¶</a></h2>
 <ol class="arabic simple">
 <li><p>准备三个.conf 文件</p></li>
 </ol>
@@ -909,8 +923,8 @@ redis-server redis-6381.conf
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>redis-cli -p <span class="m">6379</span> info <span class="o">[</span>replication<span class="o">]</span>
 </pre></div>
 </div>
-<div class="section" id="id12">
-<h3>手动切换主从关系<a class="headerlink" href="#id12" title="永久链接至标题">¶</a></h3>
+<div class="section" id="id13">
+<h3>手动切换主从关系<a class="headerlink" href="#id13" title="永久链接至标题">¶</a></h3>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># 杀死6379的主库实例</span>
 <span class="nb">kill</span> 主库PID
 
@@ -1305,6 +1319,74 @@ location / <span class="o">{</span>
         error_page <span class="m">400</span> <span class="m">403</span> <span class="m">404</span> <span class="m">405</span> /40x.html<span class="p">;</span>
         <span class="o">}</span>
 </pre></div>
+</div>
+<div class="section" id="id14">
+<h2>Nginx反向代理<a class="headerlink" href="#id14" title="永久链接至标题">¶</a></h2>
+<ol class="arabic simple">
+<li><p>实验准备2个nginx服务器</p></li>
+</ol>
+<p>192.168.13.24 代理服务器</p>
+<p>192.168.13.79 web服务器</p>
+<ol class="arabic simple" start="2">
+<li><p>配置代理服务器192.168.13.24 proxy_pass</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>server <span class="o">{</span>
+        listen       <span class="m">80</span><span class="p">;</span>
+        server_name  www.pythonav.cn<span class="p">;</span>
+        root html/python<span class="p">;</span>
+        location /<span class="o">{</span>
+            proxy_pass http://192.168.13.79/<span class="p">;</span>
+            index  index.html index.htm<span class="p">;</span>
+        <span class="o">}</span>
+　   <span class="c1">#在python路径下的40x.html错误页面</span>
+        error_page <span class="m">400</span> <span class="m">403</span> <span class="m">404</span> <span class="m">405</span> /40x.html<span class="p">;</span>
+        <span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id15">
+<h2>Nginx负载均衡<a class="headerlink" href="#id15" title="永久链接至标题">¶</a></h2>
+<ol class="arabic simple">
+<li><p>准备3台计算机</p></li>
+</ol>
+<p>192.168.13.121 负载均衡器</p>
+<p>192.168.13.79 web服务器</p>
+<p>192.168.13.24 web服务器</p>
+<ol class="arabic simple" start="2">
+<li><p>配置代理服务器192.168.13.121</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>upstream webcluster<span class="o">{</span>
+server <span class="m">192</span>.168.13.79<span class="p">;</span>
+server <span class="m">192</span>.168.13.24<span class="p">;</span>
+<span class="o">}</span>
+
+
+server <span class="o">{</span>
+        ...
+        location /<span class="o">{</span>
+            proxy_pass http://webcluster<span class="p">;</span>
+        <span class="o">}</span>
+        ...
+<span class="o">}</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>upstream分配策略</p></li>
+</ol>
+<ul class="simple">
+<li><p>轮巡</p></li>
+<li><p>weight 权重</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">shell</span>&#160;&#160;&#160; <span class="pre">upstream</span> <span class="pre">django</span> <span class="pre">{</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.10:8000</span> <span class="pre">weight=5;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.11:9000</span> <span class="pre">weight=10;#这个节点访问比率是大于8000的</span>&#160;&#160;&#160; <span class="pre">}</span></code></p>
+<ul class="simple">
+<li><p>ip_hash 不能和</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">shell</span>&#160;&#160;&#160; <span class="pre">upstream</span> <span class="pre">django</span> <span class="pre">{</span>&#160;&#160;&#160; <span class="pre">　　　　ip_hash;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.10:8000;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.11:9000;</span>&#160;&#160;&#160; <span class="pre">}</span></code></p>
+<ul class="simple">
+<li><p>backup
+在非backup机器繁忙或者宕机时，请求backup机器，因此机器默认压力最小</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">shell</span>&#160;&#160;&#160; <span class="pre">upstream</span> <span class="pre">django</span> <span class="pre">{</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.10:8000</span> <span class="pre">weight=5;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.11:9000;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">server</span> <span class="pre">10.0.0.12:8080</span> <span class="pre">backup;</span>&#160;&#160;&#160; <span class="pre">}</span></code></p>
 </div>
 </div>
 <div class="section" id="nodejsnpm">
