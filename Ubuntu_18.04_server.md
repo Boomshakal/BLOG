@@ -1177,9 +1177,91 @@ server {
         }
 ```
 
+## Nginx反向代理
+
+1. 实验准备2个nginx服务器
+
+   192.168.13.24 代理服务器
+
+   192.168.13.79 web服务器
+
+2. 配置代理服务器192.168.13.24   proxy_pass
+
+```shell
+server {
+        listen       80;
+        server_name  www.pythonav.cn;
+        root html/python;
+        location /{
+        	proxy_pass http://192.168.13.79/;
+            index  index.html index.htm;
+        }
+　	#在python路径下的40x.html错误页面
+        error_page 400 403 404 405 /40x.html;
+        }
+```
+
+## Nginx负载均衡
+
+1. 准备3台计算机
+
+   192.168.13.121  负载均衡器
+
+   192.168.13.79 web服务器
+
+   192.168.13.24 web服务器
+
+2. 配置代理服务器192.168.13.121
+
+```shell
+upstream webcluster{
+server 192.168.13.79;
+server 192.168.13.24;
+}
 
 
+server {
+		...
+		location /{
+        	proxy_pass http://webcluster;
+        }
+		...
+}
+```
 
+3. upstream分配策略
+
+   - 轮巡
+   - weight 权重
+
+   ```shell
+   upstream django {
+          server 10.0.0.10:8000 weight=5;
+          server 10.0.0.11:9000 weight=10;#这个节点访问比率是大于8000的
+   }
+   ```
+
+   - ip_hash 不能和
+
+   ```shell
+   upstream django {
+   　　　　ip_hash;
+          server 10.0.0.10:8000;
+          server 10.0.0.11:9000;
+   }
+   ```
+
+   - backup  在非backup机器繁忙或者宕机时，请求backup机器，因此机器默认压力最小
+
+   ```shell
+   upstream django {
+          server 10.0.0.10:8000 weight=5;
+          server 10.0.0.11:9000;
+          server 10.0.0.12:8080 backup;
+   }
+   ```
+
+   
 
 
 
