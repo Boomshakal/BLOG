@@ -1261,6 +1261,240 @@ upstream django {
 }
 ```
 
+
+
+# uWSGI
+
+1. 安装uWSGI
+
+```shell
+# 进入虚拟环境venv，安装uwsgi
+(venv) [root@slave 192.168.11.64 /opt]$pip3 install uwsgi
+# 检查uwsgi版本
+(venv) [root@slave 192.168.11.64 /opt]$uwsgi --version
+2.0.17.1
+# 检查uwsgi python版本
+uwsgi --python-version
+```
+
+2. 运行简单测试
+
+```shell
+#启动一个python
+uwsgi --http :8000 --wsgi-file test.py
+
+http :8000: 使用http协议，端口8000
+wsgi-file test.py: 加载指定的文件，test.py
+
+# test.py
+def application(env, start_response):
+    start_response('200 OK', [('Content-Type','text/html')])
+    return [b"Hello World"] # python3
+```
+
+3. 启动django项目
+
+```shell
+#mysite/wsgi.py  确保找到这个文件
+uwsgi --http :8000 --module mysite.wsgi
+module mysite.wsgi: 加载指定的wsgi模块
+```
+
+4. uWSGI热加载项目
+
+```shell
+在启动命令后面加上参数
+uwsgi --http :8000 --module mysite.wsgi --py-autoreload=1 
+#发布命令
+command= /home/venv/bin/uwsgi --uwsgi 0.0.0.0:8000 --chdir /opt/mysite --home=/home/venv --module mysite.wsgi
+#此时修改django代码，uWSGI会自动加载django程序，页面生效
+```
+
+5. 配置文件启动uWSGI
+
+```shell
+uwsgi支持ini、xml等多种配置方式，本文以 ini 为例， 在/etc/目录下新建uwsgi_nginx.ini，添加如下配置：
+
+# mysite_uwsgi.ini file
+[uwsgi]
+
+# Django-related settings
+# the base directory (full path)
+chdir           = /opt/mysite
+# Django's wsgi file
+module          = mysite.wsgi
+# the virtualenv (full path)
+home            = /opt/venv
+# process-related settings
+# master
+master          = true
+# maximum number of worker processes
+processes       = 1
+# the socket (use the full path to be safe
+# 必须配合Nginx使用socket
+socket          = 0.0.0.0:8000
+# 单独使用
+http          = 0.0.0.0:8000
+# ... with appropriate permissions - may be needed
+# chmod-socket    = 664
+# clear environment on exit
+vacuum          = true
+# 后台运行
+daemonize = yes
+```
+
+6. #### 指定配置文件启动命令
+
+```shell
+uwsgi --ini  /etc/uwsgi_nginx.ini
+```
+
+7. 配置nginx
+
+```shell
+worker_processes  1;
+error_log  logs/error.log;
+pid        logs/nginx.pid;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+    access_log  logs/access.log  main;
+    sendfile        on;
+    keepalive_timeout  65;
+　　#nginx反向代理uwsgi
+    server {
+        listen       80;
+        server_name  192.168.11.64;
+        location / {
+　　　　  #nginx自带ngx_http_uwsgi_module模块，起到nginx和uwsgi交互作用
+         #通过uwsgi_pass设置服务器地址和协议，讲动态请求转发给uwsgi处理
+         include  /opt/nginx1-12/conf/uwsgi_params;
+         uwsgi_pass 0.0.0.0:8000;
+            root   html;
+            index  index.html index.htm;
+        }
+　　　　  #nginx处理静态页面资源
+　　　　  location /static{
+　　　　　　　　alias /opt/nginx1-12/static;　　　
+         }
+　　　　　#nginx处理媒体资源
+　　　　　location /media{
+　　　　　　　　alias /opt/nginx1-12/media;　　
+         }
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+    }
+}
+```
+
+
+
+
+
+# supervisor 进程管理工具
+
+1. 将linux进程运行在后台的方法有哪些
+
+   - 命令后面加上 & 符号
+
+   - 使用nohup命令
+   - 使用进程管理工具supervisor
+
+2. 安装supervisor,使用Python2的包管理工具easy_install
+
+```shell
+# apt install python-setuptools  #如果没有easy_install命令
+easy_install supervisor
+```
+
+3. 通过命令生成supervisor的配支文件
+
+```shell
+echo_supervisord_conf > /etc/supervisord.conf
+```
+
+4. 再/etc/supervisord.conf末尾添加上如下代码！！！！！！
+
+```shell
+[program:my]
+#command=/opt/venv/bin/uwsgi --ini  /etc/uwsgi_nginx.ini  #这里是结合virtualenv的命令 和supervisor的精髓！！！！
+command= /home/venv/bin/uwsgi --uwsgi 0.0.0.0:8000 --chdir /opt/mysite --home=/home/venv --module mysite.wsgi
+#--home指的是虚拟环境目录  --module找到 mysite/wsgi.py
+```
+
+```shell
+# supervisord.conf配置文件参数解释
+# [program:xx]是被管理的进程配置参数，xx是进程的名称
+[program:xx]
+command=/opt/apache-tomcat-8.0.35/bin/catalina.sh run  ; 程序启动命令
+autostart=true       ; 在supervisord启动的时候也自动启动
+startsecs=10         ; 启动10秒后没有异常退出，就表示进程正常启动了，默认为1秒
+autorestart=true     ; 程序退出后自动重启,可选值：[unexpected,true,false]，默认为unexpected，表示进程意外杀死后才重启
+startretries=3       ; 启动失败自动重试次数，默认是3
+user=tomcat          ; 用哪个用户启动进程，默认是root
+priority=999         ; 进程启动优先级，默认999，值小的优先启动
+redirect_stderr=true ; 把stderr重定向到stdout，默认false
+stdout_logfile_maxbytes=20MB  ; stdout 日志文件大小，默认50MB
+stdout_logfile_backups = 20   ; stdout 日志文件备份数，默认是10
+; stdout 日志文件，需要注意当指定目录不存在时无法正常启动，所以需要手动创建目录（supervisord 会自动创建日志文件）
+stdout_logfile=/opt/apache-tomcat-8.0.35/logs/catalina.out
+stopasgroup=false     ;默认为false,进程被杀死时，是否向这个进程组发送stop信号，包括子进程
+killasgroup=false     ;默认为false，向进程组发送kill信号，包括子进程
+```
+
+5. 启动supervisord服务端，指定配置文件启动
+
+```shell
+supervisord -c /etc/supervisord.conf
+```
+
+
+
+6.  重新加载supervisor
+
+```shell
+一、添加好配置文件后
+
+二、更新新的配置到supervisord    
+
+supervisorctl update
+三、重新启动配置中的所有程序
+
+supervisorctl reload
+四、启动某个进程(program_name=你配置中写的程序名称)
+
+supervisorctl start program_name
+五、查看正在守候的进程
+
+supervisorctl
+六、停止某一进程 (program_name=你配置中写的程序名称)
+
+pervisorctl stop program_name
+七、重启某一进程 (program_name=你配置中写的程序名称)
+
+supervisorctl restart program_name
+八、停止全部进程
+
+supervisorctl stop all
+注意：显示用stop停止掉的进程，用reload或者update都不会自动重启。
+```
+
+
+
+
+
+
+
+
+
    
 
 
