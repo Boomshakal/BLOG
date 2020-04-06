@@ -786,7 +786,7 @@ redis-cli -p 6379 info [replication]
 
 ```shell
 # 杀死6379的主库实例
-kill 主库PID
+kill - 9 主库PID
 
 # 手动切换主从身份
     # 登录redis-6380,通过命令，去掉自己的从库身份,等待连接
@@ -1030,7 +1030,7 @@ sudo service mongod start
 
 
 
-# Nginx
+# Nginx配置
 
 技术栈:
 
@@ -1263,7 +1263,7 @@ upstream django {
 
 
 
-# uWSGI
+# uWSGI配置
 
 1. 安装uWSGI
 
@@ -1489,13 +1489,7 @@ supervisorctl stop all
 
 
 
-
-
-
-
-
-
-   
+  
 
 
 
