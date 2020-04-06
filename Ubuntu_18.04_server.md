@@ -1682,6 +1682,8 @@ group1/M00/00/00/wKgygF6KuQCAVACRAAQkAzlJUnE969.jpg
 1. 安装依赖库
 
 ```shell
+sudo apt-get install libpcre3 libpcre3-dev libpcrecpp0v5 libssl-dev zlib1g-dev -y
+
 # 安装gcc g++的依赖库
 apt-get install build-essential libtool
 # 安装 pcre依赖库

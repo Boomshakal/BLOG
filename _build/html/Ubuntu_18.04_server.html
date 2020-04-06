@@ -124,15 +124,21 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#mongodb">安装MongoDB</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#nginx">Nginx</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="#nginx">Nginx配置</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#id14">Nginx反向代理</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#id15">Nginx负载均衡</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="#uwsgi">uWSGI配置</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#supervisor">supervisor 进程管理工具</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#nodejsnpm">安装nodejs、npm</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#git-clone">git clone 提速</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#systemback-ios">安装 systemback 备份IOS镜像</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#systemback4gubuntu">Systemback制作大于4G的Ubuntu系统镜像</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#fastdfs">FastDFS文件管理系统</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#nginxfastdfs-nginx-module">安装nginx及fastdfs-nginx-module</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="django_restframework.html">django restframework</a></li>
@@ -926,7 +932,7 @@ redis-server redis-6381.conf
 <div class="section" id="id13">
 <h3>手动切换主从关系<a class="headerlink" href="#id13" title="永久链接至标题">¶</a></h3>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># 杀死6379的主库实例</span>
-<span class="nb">kill</span> 主库PID
+<span class="nb">kill</span> - <span class="m">9</span> 主库PID
 
 <span class="c1"># 手动切换主从身份</span>
     <span class="c1"># 登录redis-6380,通过命令，去掉自己的从库身份,等待连接</span>
@@ -1172,7 +1178,7 @@ sudo service mongod start
 </div>
 </div>
 <div class="section" id="nginx">
-<h1>Nginx<a class="headerlink" href="#nginx" title="永久链接至标题">¶</a></h1>
+<h1>Nginx配置<a class="headerlink" href="#nginx" title="永久链接至标题">¶</a></h1>
 <p>技术栈:</p>
 <p>收费版技术栈</p>
 <p>apache web+java+tomcat应用服务器+oracle
@@ -1406,6 +1412,227 @@ server <span class="o">{</span>
 </div>
 </div>
 </div>
+<div class="section" id="uwsgi">
+<h1>uWSGI配置<a class="headerlink" href="#uwsgi" title="永久链接至标题">¶</a></h1>
+<ol class="arabic simple">
+<li><p>安装uWSGI</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># 进入虚拟环境venv，安装uwsgi</span>
+<span class="o">(</span>venv<span class="o">)</span> <span class="o">[</span>root@slave <span class="m">192</span>.168.11.64 /opt<span class="o">]</span><span class="nv">$pip3</span> install uwsgi
+<span class="c1"># 检查uwsgi版本</span>
+<span class="o">(</span>venv<span class="o">)</span> <span class="o">[</span>root@slave <span class="m">192</span>.168.11.64 /opt<span class="o">]</span><span class="nv">$uwsgi</span> --version
+<span class="m">2</span>.0.17.1
+<span class="c1"># 检查uwsgi python版本</span>
+uwsgi --python-version
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>运行简单测试</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1">#启动一个python</span>
+uwsgi --http :8000 --wsgi-file test.py
+
+http :8000: 使用http协议，端口8000
+wsgi-file test.py: 加载指定的文件，test.py
+
+<span class="c1"># test.py</span>
+def application<span class="o">(</span>env, start_response<span class="o">)</span>:
+    start_response<span class="o">(</span><span class="s1">&#39;200 OK&#39;</span>, <span class="o">[(</span><span class="s1">&#39;Content-Type&#39;</span>,<span class="s1">&#39;text/html&#39;</span><span class="o">)])</span>
+    <span class="k">return</span> <span class="o">[</span>b<span class="s2">&quot;Hello World&quot;</span><span class="o">]</span> <span class="c1"># python3</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>启动django项目</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1">#mysite/wsgi.py  确保找到这个文件</span>
+uwsgi --http :8000 --module mysite.wsgi
+module mysite.wsgi: 加载指定的wsgi模块
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>uWSGI热加载项目</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>在启动命令后面加上参数
+uwsgi --http :8000 --module mysite.wsgi --py-autoreload<span class="o">=</span><span class="m">1</span>
+<span class="c1">#发布命令</span>
+<span class="nv">command</span><span class="o">=</span> /home/venv/bin/uwsgi --uwsgi <span class="m">0</span>.0.0.0:8000 --chdir /opt/mysite --home<span class="o">=</span>/home/venv --module mysite.wsgi
+<span class="c1">#此时修改django代码，uWSGI会自动加载django程序，页面生效</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>配置文件启动uWSGI</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>uwsgi支持ini、xml等多种配置方式，本文以 ini 为例， 在/etc/目录下新建uwsgi_nginx.ini，添加如下配置：
+
+<span class="c1"># mysite_uwsgi.ini file</span>
+<span class="o">[</span>uwsgi<span class="o">]</span>
+
+<span class="c1"># Django-related settings</span>
+<span class="c1"># the base directory (full path)</span>
+<span class="nv">chdir</span>           <span class="o">=</span> /opt/mysite
+<span class="c1"># Django&#39;s wsgi file</span>
+<span class="nv">module</span>          <span class="o">=</span> mysite.wsgi
+<span class="c1"># the virtualenv (full path)</span>
+<span class="nv">home</span>            <span class="o">=</span> /opt/venv
+<span class="c1"># process-related settings</span>
+<span class="c1"># master</span>
+<span class="nv">master</span>          <span class="o">=</span> <span class="nb">true</span>
+<span class="c1"># maximum number of worker processes</span>
+<span class="nv">processes</span>       <span class="o">=</span> <span class="m">1</span>
+<span class="c1"># the socket (use the full path to be safe</span>
+<span class="c1"># 必须配合Nginx使用socket</span>
+<span class="nv">socket</span>          <span class="o">=</span> <span class="m">0</span>.0.0.0:8000
+<span class="c1"># 单独使用</span>
+<span class="nv">http</span>          <span class="o">=</span> <span class="m">0</span>.0.0.0:8000
+<span class="c1"># ... with appropriate permissions - may be needed</span>
+<span class="c1"># chmod-socket    = 664</span>
+<span class="c1"># clear environment on exit</span>
+<span class="nv">vacuum</span>          <span class="o">=</span> <span class="nb">true</span>
+<span class="c1"># 后台运行</span>
+<span class="nv">daemonize</span> <span class="o">=</span> yes
+</pre></div>
+</div>
+<ol class="arabic" start="6">
+<li><p class="rubric" id="id16">指定配置文件启动命令</p>
+</li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>uwsgi --ini  /etc/uwsgi_nginx.ini
+</pre></div>
+</div>
+<ol class="arabic simple" start="7">
+<li><p>配置nginx</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>worker_processes  <span class="m">1</span><span class="p">;</span>
+error_log  logs/error.log<span class="p">;</span>
+pid        logs/nginx.pid<span class="p">;</span>
+events <span class="o">{</span>
+    worker_connections  <span class="m">1024</span><span class="p">;</span>
+<span class="o">}</span>
+http <span class="o">{</span>
+    include       mime.types<span class="p">;</span>
+    default_type  application/octet-stream<span class="p">;</span>
+    log_format  main  <span class="s1">&#39;$remote_addr - $remote_user [$time_local] &quot;$request&quot; &#39;</span>
+                      <span class="s1">&#39;$status $body_bytes_sent &quot;$http_referer&quot; &#39;</span>
+                      <span class="s1">&#39;&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;&#39;</span><span class="p">;</span>
+    access_log  logs/access.log  main<span class="p">;</span>
+    sendfile        on<span class="p">;</span>
+    keepalive_timeout  <span class="m">65</span><span class="p">;</span>
+　　<span class="c1">#nginx反向代理uwsgi</span>
+    server <span class="o">{</span>
+        listen       <span class="m">80</span><span class="p">;</span>
+        server_name  <span class="m">192</span>.168.11.64<span class="p">;</span>
+        location / <span class="o">{</span>
+　　　　  <span class="c1">#nginx自带ngx_http_uwsgi_module模块，起到nginx和uwsgi交互作用</span>
+         <span class="c1">#通过uwsgi_pass设置服务器地址和协议，讲动态请求转发给uwsgi处理</span>
+         include  /opt/nginx1-12/conf/uwsgi_params<span class="p">;</span>
+         uwsgi_pass <span class="m">0</span>.0.0.0:8000<span class="p">;</span>
+            root   html<span class="p">;</span>
+            index  index.html index.htm<span class="p">;</span>
+        <span class="o">}</span>
+　　　　  <span class="c1">#nginx处理静态页面资源</span>
+　　　　  location /static<span class="o">{</span>
+　　　　　　　　<span class="nb">alias</span> /opt/nginx1-12/static<span class="p">;</span>
+         <span class="o">}</span>
+　　　　　<span class="c1">#nginx处理媒体资源</span>
+　　　　　location /media<span class="o">{</span>
+　　　　　　　　<span class="nb">alias</span> /opt/nginx1-12/media<span class="p">;</span>
+         <span class="o">}</span>
+        error_page   <span class="m">500</span> <span class="m">502</span> <span class="m">503</span> <span class="m">504</span>  /50x.html<span class="p">;</span>
+        <span class="nv">location</span> <span class="o">=</span> /50x.html <span class="o">{</span>
+            root   html<span class="p">;</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="supervisor">
+<h1>supervisor 进程管理工具<a class="headerlink" href="#supervisor" title="永久链接至标题">¶</a></h1>
+<ol class="arabic simple">
+<li><p>将linux进程运行在后台的方法有哪些</p></li>
+</ol>
+<ul class="simple">
+<li><p>命令后面加上 &amp; 符号</p></li>
+<li><p>使用nohup命令</p></li>
+<li><p>使用进程管理工具supervisor</p></li>
+</ul>
+<ol class="arabic simple" start="2">
+<li><p>安装supervisor,使用Python2的包管理工具easy_install</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># apt install python-setuptools  #如果没有easy_install命令</span>
+easy_install supervisor
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>通过命令生成supervisor的配支文件</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>echo_supervisord_conf &gt; /etc/supervisord.conf
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>再/etc/supervisord.conf末尾添加上如下代码！！！！！！</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>program:my<span class="o">]</span>
+<span class="c1">#command=/opt/venv/bin/uwsgi --ini  /etc/uwsgi_nginx.ini  #这里是结合virtualenv的命令 和supervisor的精髓！！！！</span>
+<span class="nv">command</span><span class="o">=</span> /home/venv/bin/uwsgi --uwsgi <span class="m">0</span>.0.0.0:8000 --chdir /opt/mysite --home<span class="o">=</span>/home/venv --module mysite.wsgi
+<span class="c1">#--home指的是虚拟环境目录  --module找到 mysite/wsgi.py</span>
+</pre></div>
+</div>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># supervisord.conf配置文件参数解释</span>
+<span class="c1"># [program:xx]是被管理的进程配置参数，xx是进程的名称</span>
+<span class="o">[</span>program:xx<span class="o">]</span>
+<span class="nv">command</span><span class="o">=</span>/opt/apache-tomcat-8.0.35/bin/catalina.sh run  <span class="p">;</span> 程序启动命令
+<span class="nv">autostart</span><span class="o">=</span><span class="nb">true</span>       <span class="p">;</span> 在supervisord启动的时候也自动启动
+<span class="nv">startsecs</span><span class="o">=</span><span class="m">10</span>         <span class="p">;</span> 启动10秒后没有异常退出，就表示进程正常启动了，默认为1秒
+<span class="nv">autorestart</span><span class="o">=</span><span class="nb">true</span>     <span class="p">;</span> 程序退出后自动重启,可选值：<span class="o">[</span>unexpected,true,false<span class="o">]</span>，默认为unexpected，表示进程意外杀死后才重启
+<span class="nv">startretries</span><span class="o">=</span><span class="m">3</span>       <span class="p">;</span> 启动失败自动重试次数，默认是3
+<span class="nv">user</span><span class="o">=</span>tomcat          <span class="p">;</span> 用哪个用户启动进程，默认是root
+<span class="nv">priority</span><span class="o">=</span><span class="m">999</span>         <span class="p">;</span> 进程启动优先级，默认999，值小的优先启动
+<span class="nv">redirect_stderr</span><span class="o">=</span><span class="nb">true</span> <span class="p">;</span> 把stderr重定向到stdout，默认false
+<span class="nv">stdout_logfile_maxbytes</span><span class="o">=</span>20MB  <span class="p">;</span> stdout 日志文件大小，默认50MB
+<span class="nv">stdout_logfile_backups</span> <span class="o">=</span> <span class="m">20</span>   <span class="p">;</span> stdout 日志文件备份数，默认是10
+<span class="p">;</span> stdout 日志文件，需要注意当指定目录不存在时无法正常启动，所以需要手动创建目录（supervisord 会自动创建日志文件）
+<span class="nv">stdout_logfile</span><span class="o">=</span>/opt/apache-tomcat-8.0.35/logs/catalina.out
+<span class="nv">stopasgroup</span><span class="o">=</span><span class="nb">false</span>     <span class="p">;</span>默认为false,进程被杀死时，是否向这个进程组发送stop信号，包括子进程
+<span class="nv">killasgroup</span><span class="o">=</span><span class="nb">false</span>     <span class="p">;</span>默认为false，向进程组发送kill信号，包括子进程
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>启动supervisord服务端，指定配置文件启动</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>supervisord -c /etc/supervisord.conf
+</pre></div>
+</div>
+<ol class="arabic simple" start="6">
+<li><p>重新加载supervisor</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>一、添加好配置文件后
+
+二、更新新的配置到supervisord
+
+supervisorctl update
+三、重新启动配置中的所有程序
+
+supervisorctl reload
+四、启动某个进程<span class="o">(</span><span class="nv">program_name</span><span class="o">=</span>你配置中写的程序名称<span class="o">)</span>
+
+supervisorctl start program_name
+五、查看正在守候的进程
+
+supervisorctl
+六、停止某一进程 <span class="o">(</span><span class="nv">program_name</span><span class="o">=</span>你配置中写的程序名称<span class="o">)</span>
+
+pervisorctl stop program_name
+七、重启某一进程 <span class="o">(</span><span class="nv">program_name</span><span class="o">=</span>你配置中写的程序名称<span class="o">)</span>
+
+supervisorctl restart program_name
+八、停止全部进程
+
+supervisorctl stop all
+注意：显示用stop停止掉的进程，用reload或者update都不会自动重启。
+</pre></div>
+</div>
+</div>
 <div class="section" id="nodejsnpm">
 <h1>安装nodejs、npm<a class="headerlink" href="#nodejsnpm" title="永久链接至标题">¶</a></h1>
 <ol class="arabic">
@@ -1512,6 +1739,170 @@ sudo make install
 
 <span class="c1"># 生成ISO文件</span>
 /opt/schily/bin/mkisofs -iso-level <span class="m">3</span> -r -V sblive -cache-inodes -J -l -b isolinux/isolinux.bin -no-emul-boot -boot-load-size <span class="m">4</span> -boot-info-table -c isolinux/boot.cat -o sblive.iso sblive
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="fastdfs">
+<h1>FastDFS文件管理系统<a class="headerlink" href="#fastdfs" title="永久链接至标题">¶</a></h1>
+<ol class="arabic simple">
+<li><p>下载FastDFS软件包、依赖库libfastcommon、Nginx、fastdfs-nginx-module</p></li>
+</ol>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/happyfish100/FastDFS">https://github.com/happyfish100/FastDFS</a></p></li>
+<li><p><a class="reference external" href="https://github.com/happyfish100/libfastcommon/releases">https://github.com/happyfish100/libfastcommon/releases</a></p></li>
+<li><p><a class="reference external" href="https://nginx.org/download/">https://nginx.org/download/</a></p></li>
+<li><p><a class="reference external" href="https://github.com/happyfish100/fastdfs-nginx-module/releases">https://github.com/happyfish100/fastdfs-nginx-module/releases</a></p></li>
+</ul>
+<ol class="arabic simple" start="2">
+<li><p>安装libfastcommon依赖包</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>unzip libfastcommon-master.zip
+<span class="nb">cd</span> libfastcommon-master
+./make.sh
+./make.sh install
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>安装FastDFS</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>unzip fastdfs-master.zip
+<span class="nb">cd</span> fastdfs-master
+./make.sh
+./make.sh install
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>配置跟踪服务器tracker</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cp /etc/fdfs/tracker.conf.sample /etc/fdfs/tracker.conf
+mkdir -p /home/li/fastdfs/tracker
+
+vim /etc/fdfs/tracker.conf
+<span class="c1"># 修改base_path</span>
+<span class="nv">base_path</span><span class="o">=</span>/home/li/fastdfs/tracker
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>配置存储服务器storage</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cp /etc/fdfs/storage.conf.sample /etc/fdfs/storage.conf
+mkdir –p /home/li/fastdfs/storage
+
+vim /etc/fdfs/storage.conf
+<span class="c1"># 修改base_path、store_path0、tracker_server</span>
+<span class="nv">base_path</span><span class="o">=</span>/home/li/fastdfs/storage
+<span class="nv">store_path0</span><span class="o">=</span>/home/li/fastdfs/storage
+<span class="nv">tracker_server</span><span class="o">=</span>自己ubuntu虚拟机的ip地址:22122
+</pre></div>
+</div>
+<ol class="arabic simple" start="6">
+<li><p>启动tracker 和 storage</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo service fdfs_trackerd start
+sudo service fdfs_storaged start
+</pre></div>
+</div>
+<ol class="arabic simple" start="7">
+<li><p>配置client</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cp /etc/fdfs/client.conf.sample /etc/fdfs/client.conf
+
+vim /etc/fdfs/client.conf
+<span class="c1"># 修改base_path、tracker_server</span>
+<span class="nv">base_path</span><span class="o">=</span>/home/li/fastdfs/tracker
+<span class="nv">tracker_server</span><span class="o">=</span>自己ubuntu虚拟机的ip地址:22122
+</pre></div>
+</div>
+<ol class="arabic simple" start="8">
+<li><p>测试是否可以上传</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>fdfs_upload_file /etc/fdfs/client.conf ./下载/photo.jpg
+<span class="c1"># 输出如下格式</span>
+group1/M00/00/00/wKgygF6KuQCAVACRAAQkAzlJUnE969.jpg
+</pre></div>
+</div>
+<div class="section" id="nginxfastdfs-nginx-module">
+<h2>安装nginx及fastdfs-nginx-module<a class="headerlink" href="#nginxfastdfs-nginx-module" title="永久链接至标题">¶</a></h2>
+<ol class="arabic simple">
+<li><p>安装依赖库</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo apt-get install libpcre3 libpcre3-dev libpcrecpp0v5 libssl-dev zlib1g-dev -y
+
+<span class="c1"># 安装gcc g++的依赖库</span>
+apt-get install build-essential libtool
+<span class="c1"># 安装 pcre依赖库</span>
+apt-get install libpcre3 libpcre3-dev
+<span class="c1"># 安装 zlib依赖库</span>
+apt-get install zlib1g-dev
+<span class="c1"># 安装 ssl依赖库</span>
+apt-get install openssl
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>解压源码包</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>tar -xvf nginx-1.12.2.tar
+unzip fastdfs-nginx-module-master.zip
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>安装nginx</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> nginx-1.12.2
+./configure --prefix<span class="o">=</span>/usr/local/nginx/ --add-module<span class="o">=</span>/home/li/下载/fastdfs-module-master/src
+
+make <span class="o">&amp;&amp;</span> make install
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>修改配置文件</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cp fastdfs-nginx-module-master/src/mod_fastdfs.conf /etc/fdfs/
+
+vim /etc/fdfs/mod_fastdfs.conf
+
+<span class="nv">connect_timeout</span><span class="o">=</span><span class="m">10</span>
+<span class="nv">tracker_server</span><span class="o">=</span>自己ubuntu虚拟机的ip地址:22122
+<span class="nv">url_have_group_name</span><span class="o">=</span><span class="nb">true</span>
+<span class="nv">store_path0</span><span class="o">=</span>/home/li/fastdfs/storage
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>将fastdfs-master/conf下的http.conf、mime.types复制到/etc/fdfs/</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cp http.conf /etc/fdfs/
+cp mime.types /etc/fdfs/
+</pre></div>
+</div>
+<ol class="arabic simple" start="6">
+<li><p>修改nginx配置文件添加如下</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>vim /usr/local/nginx/conf/nginx.conf
+
+server <span class="o">{</span>
+            listen       <span class="m">8888</span><span class="p">;</span>
+            server_name  localhost<span class="p">;</span>
+            location ~/group<span class="o">[</span><span class="m">0</span>-9<span class="o">]</span>/ <span class="o">{</span>
+                ngx_fastdfs_module<span class="p">;</span>
+            <span class="o">}</span>
+            error_page   <span class="m">500</span> <span class="m">502</span> <span class="m">503</span> <span class="m">504</span>  /50x.html<span class="p">;</span>
+            <span class="nv">location</span> <span class="o">=</span> /50x.html <span class="o">{</span>
+            root   html<span class="p">;</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="7">
+<li><p>启动nginx</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo /usr/local/nginx/sbin/nginx
+</pre></div>
+</div>
+<ol class="arabic simple" start="8">
+<li><p>python客户端上传测试</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install fdfs_client-py-master.zip
 </pre></div>
 </div>
 </div>
