@@ -1607,3 +1607,186 @@ sudo make install
 /opt/schily/bin/mkisofs -iso-level 3 -r -V sblive -cache-inodes -J -l -b isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table -c isolinux/boot.cat -o sblive.iso sblive
 ```
 
+# FastDFS文件管理系统
+
+1. 下载FastDFS软件包、依赖库libfastcommon、Nginx、fastdfs-nginx-module
+   - https://github.com/happyfish100/FastDFS
+   - https://github.com/happyfish100/libfastcommon/releases
+   - https://nginx.org/download/
+   - https://github.com/happyfish100/fastdfs-nginx-module/releases
+
+2. 安装libfastcommon依赖包
+
+```shell
+unzip libfastcommon-master.zip
+cd libfastcommon-master
+./make.sh
+./make.sh install
+```
+
+3. 安装FastDFS
+
+```shell
+unzip fastdfs-master.zip 
+cd fastdfs-master
+./make.sh 
+./make.sh install
+```
+
+4. 配置跟踪服务器tracker
+
+```shell
+cp /etc/fdfs/tracker.conf.sample /etc/fdfs/tracker.conf
+mkdir -p /home/li/fastdfs/tracker
+
+vim /etc/fdfs/tracker.conf
+# 修改base_path
+base_path=/home/li/fastdfs/tracker
+```
+
+5. 配置存储服务器storage
+
+```shell
+cp /etc/fdfs/storage.conf.sample /etc/fdfs/storage.conf
+mkdir –p /home/li/fastdfs/storage
+
+vim /etc/fdfs/storage.conf
+# 修改base_path、store_path0、tracker_server
+base_path=/home/li/fastdfs/storage
+store_path0=/home/li/fastdfs/storage
+tracker_server=自己ubuntu虚拟机的ip地址:22122
+```
+
+6. 启动tracker 和 storage
+
+```shell
+sudo service fdfs_trackerd start
+sudo service fdfs_storaged start
+```
+
+7. 配置client
+
+```shell
+cp /etc/fdfs/client.conf.sample /etc/fdfs/client.conf
+
+vim /etc/fdfs/client.conf
+# 修改base_path、tracker_server
+base_path=/home/li/fastdfs/tracker
+tracker_server=自己ubuntu虚拟机的ip地址:22122
+```
+
+8. 测试是否可以上传
+
+```shell
+fdfs_upload_file /etc/fdfs/client.conf ./下载/photo.jpg
+# 输出如下格式
+group1/M00/00/00/wKgygF6KuQCAVACRAAQkAzlJUnE969.jpg
+```
+
+## 安装nginx及fastdfs-nginx-module
+
+1. 安装依赖库
+
+```shell
+# 安装gcc g++的依赖库
+apt-get install build-essential libtool
+# 安装 pcre依赖库
+apt-get install libpcre3 libpcre3-dev
+# 安装 zlib依赖库
+apt-get install zlib1g-dev
+# 安装 ssl依赖库
+apt-get install openssl
+```
+
+2. 解压源码包
+
+```shell
+tar -xvf nginx-1.12.2.tar 
+unzip fastdfs-nginx-module-master.zip
+```
+
+3. 安装nginx
+
+```shell
+cd nginx-1.12.2
+./configure --prefix=/usr/local/nginx/ --add-module=/home/li/下载/fastdfs-module-master/src
+
+make && make install
+```
+
+4. 修改配置文件
+
+```shell
+cp fastdfs-nginx-module-master/src/mod_fastdfs.conf /etc/fdfs/
+
+vim /etc/fdfs/mod_fastdfs.conf
+
+connect_timeout=10
+tracker_server=自己ubuntu虚拟机的ip地址:22122
+url_have_group_name=true
+store_path0=/home/li/fastdfs/storage
+```
+
+5. 将fastdfs-master/conf下的http.conf、mime.types复制到/etc/fdfs/
+
+```shell
+cp http.conf /etc/fdfs/
+cp mime.types /etc/fdfs/
+```
+
+6. 修改nginx配置文件添加如下
+
+```shell
+vim /usr/local/nginx/conf/nginx.conf
+
+server {
+            listen       8888;
+            server_name  localhost;
+            location ~/group[0-9]/ {
+                ngx_fastdfs_module;
+            }
+            error_page   500 502 503 504  /50x.html;
+            location = /50x.html {
+            root   html;
+            }
+        }
+```
+
+7. 启动nginx
+
+```shell
+sudo /usr/local/nginx/sbin/nginx
+```
+
+8. python客户端上传测试
+
+```shell
+pip install fdfs_client-py-master.zip
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
