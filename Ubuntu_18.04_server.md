@@ -499,6 +499,217 @@ source /data/AllMysql.dump;
 mysql -uroot -p  <  /data/AllMysql.dump
 ```
 
+
+
+## mysql集群(多实例)
+
+### 什么是MySQL多实例
+
+MySQL多实例就是在一台机器上开启多个不同的服务端口（如：3306，3307，3308），运行多个MySQL服务进程，通过不同的socket监听不同的服务端口来提供各自的服务。
+
+### MySQL多实例的特点有以下几点
+
+- 有效利用服务器资源，当单个服务器资源有剩余时，可以充分利用剩余的资源提供更多的服务。
+- 节约服务器资源
+- 资源互相抢占问题，当某个服务实例服务并发很高时或者开启慢查询时，会消耗更多的内存、CPU、磁盘IO资源，导致服务器上的其他实例提供服务的质量下降；
+
+### 部署mysql多实例的两种方式
+
+第一种是使用`多个配置文件`启动不同的进程来实现多实例，这种方式的优势逻辑简单，配置简单，缺点是管理起来不太方便；
+
+第二种是通过官方自带的`mysqld_multi`使用单独的配置文件来实现多实例，这种方式定制每个实例的配置不太方面，优点是管理起来很方便，集中管理；
+
+
+
+### 同一开发环境下安装多个数据库，必须处理以下问题
+
+- 配置文件安装路径不能相同
+- 数据库目录不能相同
+- 启动脚本不能同名
+- 端口不能相同
+- socket文件的生成路径不能相同
+
+
+
+## mysql多实例搭建
+
+### mysqld_multi搭建
+
+1. 下载免编译二进制包
+
+```shell
+wget http://mirrors.sohu.com/mysql/MySQL-5.7/mysql-5.7.23-linux-glibc2.12-x86_64.tar.gz
+
+tar -zxvf mysql-5.7.23-linux-glibc2.12-x86_64.tar.gz
+mv mysql-5.7.23-linux-glibc2.12-x86_64 /usr/local/mysql
+
+# 关闭iptables
+service iptables stop  #临时关闭
+chkconfig iptables off  #永久关闭
+
+# 关闭selinux
+vi /etc/sysconfig/selinux 
+SELINUX=DISABLED
+
+# 创建mysql系统用户和组
+groupadd -g 27 mysql
+useradd -u 27 -g mysql mysql
+id mysql
+
+# 创建mysql目录
+mkdir -p /data/mysql/mysql_3306/data
+mkdir -p /data/mysql/mysql_3306/log
+mkdir -p /data/mysql/mysql_3306/tmp
+mkdir -p /data/mysql/mysql_3307/data
+mkdir -p /data/mysql/mysql_3307/log
+mkdir -p /data/mysql/mysql_3307/tmp
+mkdir -p /data/mysql/mysql_3308/data
+mkdir -p /data/mysql/mysql_3308/log
+mkdir -p /data/mysql/mysql_3308/tmp
+
+# 更改目录权限
+chown -R mysql:mysql /data/mysql/ 
+chown -R mysql:mysql /usr/local/mysql/
+# 添加环境变量
+echo 'export PATH=$PATH:/usr/local/mysql/bin' >>  /etc/profile 
+source /etc/profile
+
+# 复制my.cnf文件到etc目录 会将原来的my.cnf文件删除了
+cp /etc/my.cnf /etc/my.cnf.bak
+cp /usr/local/mysql/support-files/my-default.cnf /etc/my.cnf
+```
+
+2. 修改my.cnf（在一个文件中修改即可）
+
+```shell
+vim /etc/my.conf
+
+[client]
+port=3306
+socket=/tmp/mysql.sock 
+
+[mysqld_multi]
+mysqld = /usr/local/mysql/bin/mysqld_safe
+mysqladmin = /usr/local/mysql/bin/mysqladmin
+log = /data/mysql/mysqld_multi.log 
+
+[mysqld]
+basedir = /usr/local/mysql
+sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES 
+
+#3306数据库
+
+[mysqld3306]
+mysqld=mysqld
+mysqladmin=mysqladmin
+datadir=/data/mysql/mysql_3306/data
+port=3306
+server_id=3306
+socket=/tmp/mysql_3306.sock
+log-output=file
+slow_query_log = 1
+long_query_time = 1
+slow_query_log_file = /data/mysql/mysql_3306/log/slow.log
+log-error = /data/mysql/mysql_3306/log/error.log
+binlog_format = mixed
+log-bin = /data/mysql/mysql_3306/log/mysql3306_bin 
+
+#3307数据库
+
+[mysqld3307]
+mysqld=mysqld
+mysqladmin=mysqladmin
+datadir=/data/mysql/mysql_3307/data
+port=3307
+server_id=3307
+socket=/tmp/mysql_3307.sock
+log-output=file
+slow_query_log = 1
+long_query_time = 1
+slow_query_log_file = /data/mysql/mysql_3307/log/slow.log
+log-error = /data/mysql/mysql_3307/log/error.log
+binlog_format = mixed
+log-bin = /data/mysql/mysql_3307/log/mysql3307_bin 
+
+#3308数据库
+
+[mysqld3308]
+mysqld=mysqld
+mysqladmin=mysqladmin
+datadir=/data/mysql/mysql_3308/data
+port=3308
+server_id=3308
+socket=/tmp/mysql_3308.sock
+log-output=file
+slow_query_log = 1
+long_query_time = 1
+slow_query_log_file = /data/mysql/mysql_3308/log/slow.log
+log-error = /data/mysql/mysql_3308/log/error.log
+binlog_format = mixed
+log-bin = /data/mysql/mysql_3308/log/mysql3308_bin
+```
+
+3. 初始化数据库
+
+```shell
+# 初始化3306数据库
+/usr/local/mysql/scripts/mysql_install_db --basedir=/usr/local/mysql/ --datadir=/data/mysql/mysql_3306/data --defaults-file=/etc/my.cnf  
+
+/usr/local/mysql/scripts/mysql_install_db --basedir=/usr/local/mysql/ --datadir=/data/mysql/mysql_3307/data --defaults-file=/etc/my.cnf
+
+/usr/local/mysql/scripts/mysql_install_db --basedir=/usr/local/mysql/ --datadir=/data/mysql/mysql_3308/data --defaults-file=/etc/my.cnf
+```
+
+4. 查看数据库初始化是否成功
+
+```shell
+cd /data/mysql/mysql_3306/data/
+cd /data/mysql/mysql_3307/data/
+cd /data/mysql/mysql_3308/data/
+```
+
+5. 设置启动文件
+
+```shell
+cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
+```
+
+6. mysqld_multi进行多实例管理
+
+```shell
+启动全部实例：/usr/local/mysql/bin/mysqld_multi start
+
+查看全部实例状态：/usr/local/mysql/bin/mysqld_multi report 
+
+启动单个实例：/usr/local/mysql/bin/mysqld_multi start 3306 
+
+停止单个实例：/usr/local/mysql/bin/mysqld_multi stop 3306 
+
+查看单个实例状态：/usr/local/mysql/bin/mysqld_multi report 3306 
+
+# 启动全部实例
+/usr/local/mysql/bin/mysqld_multi start
+/usr/local/mysql/bin/mysqld_multi report
+
+# 查看启动进程
+ps -aux | grep mysql
+
+# 查看sock文件
+cd /tmp
+ls mysql*.sock
+
+# 修改密码
+mysql -S /tmp/mysql_3306.sock
+set password for root@'localhost'=password('xxxxxx');
+flush privileges;
+
+# 新建用户及授权
+grant ALL PRIVILEGES on *.* to admin@'%' identified by 'xxxxxx';
+flush privileges
+```
+
+
+
 ## mysql主从复制
 
 1. 设置master主库的配置文件
