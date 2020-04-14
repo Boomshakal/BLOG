@@ -258,7 +258,7 @@ flash("string",category="tag")
 get_flashed_messages(category_filter="tag")
 ```
 
-## Flash 蓝图(Blueprint)
+## Flask 蓝图(Blueprint)
 
 Blueprint 当成一个不能被启动的app Flask实例
 
@@ -273,6 +273,23 @@ def index():
 app.register_blueprint(views.blue_app,url_prefix='/blue')
 # url_prefix 为url前缀 优先register
 ```
+
+## Flask特殊装饰器
+
+```Python
+@app.before_request #请求进入视图函数之前
+@app.after_request #在相应客户端之前
+# 正常情况下流程 ： be1 - be2 -be3 -af3 - af2 -af1
+# 异常情况下流程：be1 - af3 - af2 - af1
+
+@app.errorhandler(404)
+def error404(error_info):
+    return error_info
+```
+
+
+
+
 
 
 
