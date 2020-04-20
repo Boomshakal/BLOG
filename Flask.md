@@ -288,18 +288,10 @@ def error404(error_info):
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```python
+app.run()  #run_simple
+app.__call__  
+app.wsgi_app
+app.request_class
+```
 
