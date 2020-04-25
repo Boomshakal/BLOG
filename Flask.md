@@ -295,3 +295,52 @@ app.wsgi_app
 app.request_class
 ```
 
+## Flask-Session
+
+```python
+from flask import Flask
+from flask_session import Session
+
+app = Flask(__name__)
+
+app.config["SESSION_TYPE"] = 'redis'
+app.config["SESSION_REDIS"] = Redis(host="127.0.0.1",port=6379,db=1)
+Session(app)
+
+
+@app.route('/')
+def index():
+    session['user'] = 'value'
+    return "hello"
+```
+
+## WTForms --ModelFrom
+
+```Python
+from wtforms.fields import simple,core
+from wtforms import validators
+from wtforms import Form
+
+username = simple.StringField(
+    label='用户名', #标签标记
+    validators=[validators.DataRequired(message='用户名不能为空'),
+                validators.Length(min=4,max=10,message='不是长了就是短了')], #验证条件
+    description='',			#标签ID
+    default=None,		#默认值
+    widget=None,		# 组件类型 (input type='text') 在StringField中已经被定义
+    render_kw={'class':'my_login'},			# 标签class
+)
+```
+
+## POOL数据库连接池
+
+
+
+## WebSocket
+
+
+
+
+
+
+
