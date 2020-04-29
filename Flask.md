@@ -297,3 +297,372 @@ app.wsgi_app
 app.request_class
 ```
 
+## Flask-Session
+
+```python
+from flask import Flask
+from flask_session import Session
+
+app = Flask(__name__)
+
+app.config["SESSION_TYPE"] = 'redis'
+app.config["SESSION_REDIS"] = Redis(host="127.0.0.1",port=6379,db=1)
+Session(app)
+
+
+@app.route('/')
+def index():
+    session['user'] = 'value'
+    return "hello"
+```
+
+## WTForms --ModelFrom
+
+```Python
+from wtforms.fields import simple,core
+from wtforms import validators
+from wtforms import Form
+
+username = simple.StringField(
+    label='用户名', #标签标记
+    validators=[validators.DataRequired(message='用户名不能为空'),
+                validators.Length(min=4,max=10,message='不是长了就是短了')], #验证条件
+    description='',			#标签ID
+    default=None,		#默认值
+    widget=None,		# 组件类型 (input type='text') 在StringField中已经被定义
+    render_kw={'class':'my_login'},			# 标签class
+)
+```
+
+## POOL数据库连接池
+
+```Python
+import pymysql, pymssql
+from DBUtils.PooledDB import PooledDB
+from settings import MYSQL, MSSQL
+
+# 装饰器用于使用with开关调用__enter__ 和 __exit__
+def db_conn(func):
+    def wrapper(self, *args, **kw):
+        with self as db:
+            result = func(self, db, *args, **kw)
+        return result
+
+    return wrapper
+
+
+# mssql 结果转换dict
+def get_dict(row_list, col_list):
+    cols = [d[0] for d in col_list]
+    res_list = []
+    for row in row_list:
+        res_list.append(dict(zip(cols, row)))  # 将两个列表合并成一个字典 dict(zip())方法
+    return res_list
+
+
+class DatabasePool(object):
+    def __init__(self, db):
+        self.type = db
+        if self.type == "mysql":
+            config = {
+                'creator': pymysql,
+                'host': MYSQL['HOST'],
+                'port': MYSQL['PORT'],
+                'user': MYSQL['USER'],
+                'passwd': MYSQL['PASSWD'],
+                'db': MYSQL['DB'],
+                'charset': MYSQL['CHARSET'],
+                'maxconnections': 70,  # 连接池最大连接数量
+                'cursorclass': pymysql.cursors.DictCursor
+            }
+        else:
+            config = {
+                'creator': pymssql,
+                'host': MSSQL['HOST'],
+                # 'port': MSSQL['PORT'],
+                'user': MSSQL['USER'],
+                'password': MSSQL['PASSWD'],
+                'database': MSSQL['DB'],
+                'charset': MSSQL['CHARSET'],
+                'maxconnections': 70,  # 连接池最大连接数量
+                # 'cursorclass': pymysql.cursors.DictCursor
+            }
+        self.pool = PooledDB(**config)
+
+    def __enter__(self):
+        self.conn = self.pool.connection()
+        self.cursor = self.conn.cursor()
+        return self
+
+    def __exit__(self, type, value, trace):
+        self.cursor.close()
+        self.conn.close()
+
+    # 查询sql
+    @db_conn
+    def ExecQuery(self, db, sql, *args, **kw):
+        db.cursor.execute(sql)
+        relist = db.cursor.fetchall()
+        if self.type == 'mysql':
+            return relist
+        else:
+            desc_res = db.cursor.description
+            return get_dict(relist, desc_res)
+
+    # 非查询的sql
+    @db_conn
+    def ExecNoQuery(self, db, sql, *args, **kw):
+        try:
+            db.cursor.execute(sql)
+            db.conn.commit()
+            print("执行成功！")
+        except Exception as e:
+            db.conn.rollback()
+            print(e)
+
+
+if __name__ == '__main__':
+    # connect = DatabasePool('mysql')
+    #
+    # lists = connect.ExecQuery('select * from goods_goods limit 3')
+    #
+    # for i in lists:
+    #     print(i)
+    #
+    # connect.ExecNoQuery("update goods_goods set goods_sn='6666'  where id=52")
+
+    #########
+    ##mssql##
+    #########
+    sql = '''
+    exec p_mm_wo_workshop_plan_get_items_finereport    
+    '''
+    connect = DatabasePool('mssql')
+    lists = connect.ExecQuery(sql)
+
+    for i in lists:
+        print(i)
+
+    # connect.ExecNoQuery('update mm_item set category_id=12  where id = 1')
+```
+
+
+
+## WebSocket
+
+```Python
+from flask import Flask,request
+from geventwebsocket.handler import WebSocketHandler
+from geventwebsocket.pywsgi import WSGIServer
+from geventwebsocker.Websocket import WebSocket
+
+app = Flask(__name__)
+@app.route("/")
+def index():
+    return "Hello World"
+
+@app.route("/ws")
+def ws():
+    user_socket=request.environ.get("wsgi.websocket")	# type:WebSocket
+    while 1:
+        msg = user_socket.receive()
+        user_socket.send(msg)
+
+if __name__ == '__main__':
+    http_server= WSGIServer(("0.0.0.0",9527),app,handler_class=WebSocketHandler)
+    http_server.serve_forever()
+```
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script type="application/javascript">
+    var ws= new WebSocket("ws://127.0.0.1:9527/ws");
+    ws.onopen = function(){
+      ws.send("123");
+    };
+    ws.onmessage = function (data) {
+        console.log(data.data)
+    };
+    ws.onclose = function () {
+        window.location.reload()
+    };
+</script>
+</body>
+</html>
+```
+
+### websocket 工作原理
+
+```Python
+import socket, base64, hashlib
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+sock.bind(('127.0.0.1', 9527))
+sock.listen(5)
+# 获取客户端socket对象
+conn, address = sock.accept()
+# 获取客户端的【握手】信息
+data = conn.recv(1024)
+print(data)
+"""
+b'GET /ws HTTP/1.1\r\n
+Host: 127.0.0.1:9527\r\n
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0\r\n
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n
+Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2\r\n
+Accept-Encoding: gzip, deflate\r\n
+Sec-WebSocket-Version: 13\r\n
+Origin: http://localhost:63342\r\n
+Sec-WebSocket-Extensions: permessage-deflate\r\n
+Sec-WebSocket-Key: jocLOLLq1BQWp0aZgEWL5A==\r\n
+Cookie: session=6f2bab18-2dc4-426a-8f06-de22909b967b\r\n
+Connection: keep-alive, Upgrade\r\n
+Pragma: no-cache\r\n
+Cache-Control: no-cache\r\n
+Upgrade: websocket\r\n\r\n'
+"""
+
+# magic string为：258EAFA5-E914-47DA-95CA-C5AB0DC85B11
+magic_string = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
+
+
+def get_headers(data):
+    header_dict = {}
+    header_str = data.decode("utf8")
+    for i in header_str.split("\r\n"):
+        if str(i).startswith("Sec-WebSocket-Key"):
+            header_dict["Sec-WebSocket-Key"] = i.split(":")[1].strip()
+
+    return header_dict
+
+
+def get_header(data):
+    """
+     将请求头格式化成字典
+     :param data:
+     :return:
+     """
+    header_dict = {}
+    data = str(data, encoding='utf-8')
+
+    header, body = data.split('\r\n\r\n', 1)
+    header_list = header.split('\r\n')
+    for i in range(0, len(header_list)):
+        if i == 0:
+            if len(header_list[i].split(' ')) == 3:
+                header_dict['method'], header_dict['url'], header_dict['protocol'] = header_list[i].split(' ')
+        else:
+            k, v = header_list[i].split(':', 1)
+            header_dict[k] = v.strip()
+    return header_dict
+
+
+headers = get_headers(data)  # 提取请求头信息
+# 对请求头中的sec-websocket-key进行加密
+response_tpl = "HTTP/1.1 101 Switching Protocols\r\n" \
+               "Upgrade:websocket\r\n" \
+               "Connection: Upgrade\r\n" \
+               "Sec-WebSocket-Accept: %s\r\n" \
+               "WebSocket-Location: ws://127.0.0.1:9527\r\n\r\n"
+
+value = headers['Sec-WebSocket-Key'] + magic_string
+print(value)
+ac = base64.b64encode(hashlib.sha1(value.encode('utf-8')).digest())
+response_str = response_tpl % (ac.decode('utf-8'))
+# 响应【握手】信息
+conn.send(response_str.encode("utf8"))
+
+while True:
+    msg = conn.recv(8096)
+    print(msg)
+```
+
+
+
+### 解密
+
+```Python
+# b'\x81\x83\xceH\xb6\x85\xffz\x85'
+
+hashstr = b'\x81\x83\xceH\xb6\x85\xffz\x85'
+# b'\x81    \x83    \xceH\xb6\x85\xffz\x85'
+
+# 将第二个字节也就是 \x83 第9-16位 进行与127进行位运算
+payload = hashstr[1] & 127
+print(payload)
+if payload == 127:
+    extend_payload_len = hashstr[2:10]
+    mask = hashstr[10:14]
+    decoded = hashstr[14:]
+# 当位运算结果等于127时,则第3-10个字节为数据长度
+# 第11-14字节为mask 解密所需字符串
+# 则数据为第15字节至结尾
+
+if payload == 126:
+    extend_payload_len = hashstr[2:4]
+    mask = hashstr[4:8]
+    decoded = hashstr[8:]
+# 当位运算结果等于126时,则第3-4个字节为数据长度
+# 第5-8字节为mask 解密所需字符串
+# 则数据为第9字节至结尾
+
+
+if payload <= 125:
+    extend_payload_len = None
+    mask = hashstr[2:6]
+    decoded = hashstr[6:]
+
+# 当位运算结果小于等于125时,则这个数字就是数据的长度
+# 第3-6字节为mask 解密所需字符串
+# 则数据为第7字节至结尾
+
+str_byte = bytearray()
+
+for i in range(len(decoded)):
+    byte = decoded[i] ^ mask[i % 4]
+    str_byte.append(byte)
+
+print(str_byte.decode("utf8"))
+```
+
+### 加密
+
+```Python
+import struct
+msg_bytes = "hello".encode("utf8")
+token = b"\x81"
+length = len(msg_bytes)
+
+if length < 126:
+    token += struct.pack("B", length)
+elif length == 126:
+    token += struct.pack("!BH", 126, length)
+else:
+    token += struct.pack("!BQ", 127, length)
+
+msg = token + msg_bytes
+
+print(msg)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
