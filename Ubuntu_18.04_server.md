@@ -243,6 +243,7 @@ mkvirtualenv Django -p /usr/bin/python3
 workon Django  激活虚拟环境
 deactivate     注销当前已经被激活的虚拟环境
 lsvirtualenv   显示已安装虚拟环境
+rmvirtualenv   删除虚拟环境
 ```
 
 # 查看端口
