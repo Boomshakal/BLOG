@@ -1997,6 +1997,22 @@ pip install fdfs_client-py-master.zip
 
 
 
+# Ubuntu搭建KMS服务器
+
+1. 在任意环境中，下载最新的vlmcsd releases版本，[下载地址](https://github.com/Wind4/vlmcsd/releases)。如在linux中，可以使用wget下载
+
+```shell
+wget https://github.com/Wind4/vlmcsd/releases/download/svn1111/binaries.tar.gz
+```
+
+2. 
+
+
+
+
+
+
+
 
 
 
