@@ -1240,6 +1240,29 @@ sudo service mongod stop
 sudo service mongod start
 ```
 
+8. 增删改查
+
+```sql
+show databases; #查看已有数据库
+use dataName; #选择数据库，如果不存在库，则会自动创建。
+show tables; # 查看已有的表
+show collections # 同上,
+db.createCollection('表名');#建表
+db.表名.drop(); #删除表
+
+注:table在mongodb里叫collections
+```
+
+> 增加数据，语法: db.collectionName.isnert(document)
+>
+> 删除数据，语法: db.collection.remove(查询表达式, 选项)。选项是指需要删除的文档数，{0/1}，默认是0，删除全部文档
+>
+> 修改数据，语法: db.collection.update(查询表达式,新值);
+>
+> 查找数据，语法: db.collection.find(查询表达式,查询的列)。
+
+
+
 
 
 # Nginx配置
