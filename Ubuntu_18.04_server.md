@@ -2005,35 +2005,32 @@ pip install fdfs_client-py-master.zip
 wget https://github.com/Wind4/vlmcsd/releases/download/svn1111/binaries.tar.gz
 ```
 
-2. 
+2. 解压安装包
 
+```shell
+tar -zxvf binaries.tar.gz
+```
 
+3. 运行脚本
 
+```shell
+cd binaries/Linux/intel/static/
+./vlmcsd-x64-musl-static
 
+# 查看1688端口
+netstat -lnp|grep 1688
+ps aux | grep vlmcsd
+```
 
+4. 激活windows系统
 
+```shell
+slmgr /skms 你的Ubuntu的IP地址（Ubuntu中使用ifconfig查看IP地址）
+slmgr /ato
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# 验证激活
+slmgr.vbs -dlv
+```
 
 
 
