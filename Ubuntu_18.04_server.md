@@ -246,6 +246,15 @@ lsvirtualenv   显示已安装虚拟环境
 rmvirtualenv   删除虚拟环境
 ```
 
+# pip 豆瓣源
+
+```shell
+pip install xxx -i https://pypi.douban.com/simple/
+pip install -r requirements.txt -i https://pypi.douban.com/simple/
+```
+
+
+
 # 查看端口
 ```shell
 ps -ef|grep 8000
