@@ -246,12 +246,32 @@ lsvirtualenv   显示已安装虚拟环境
 rmvirtualenv   删除虚拟环境
 ```
 
-# pip 豆瓣源
+# pip 国内源
 
 ```shell
 pip install xxx -i https://pypi.douban.com/simple/
 pip install -r requirements.txt -i https://pypi.douban.com/simple/
 ```
+
+```shell
+mkdir ~/.pip
+vim ~/.pip/pip.conf
+# 然后将下面这两行复制进去就好了
+[global]
+index-url = https://mirrors.aliyun.com/pypi/simple
+```
+
+国内其他pip源
+
+  清华：https://pypi.tuna.tsinghua.edu.cn/simple
+  中国科技大学 https://pypi.mirrors.ustc.edu.cn/simple/
+  华中理工大学：http://pypi.hustunique.com/
+  山东理工大学：http://pypi.sdutlinux.org/
+  豆瓣：http://pypi.douban.com/simple/
+
+注意：不管你用的是pip3还是pip，方法都是一样的，都是创建pip文件夹。
+
+
 
 
 
