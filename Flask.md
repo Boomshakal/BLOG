@@ -517,10 +517,10 @@ if __name__ == '__main__':
 ## WebSocket
 
 ```Python
-from flask import Flask,request
+from flask import Flask, request
+from geventwebsocket.websocket import WebSocket
 from geventwebsocket.handler import WebSocketHandler
-from geventwebsocket.pywsgi import WSGIServer
-from geventwebsocker.Websocket import WebSocket
+from gevent.pywsgi import WSGIServer
 
 app = Flask(__name__)
 @app.route("/")
@@ -555,9 +555,9 @@ if __name__ == '__main__':
     ws.onmessage = function (data) {
         console.log(data.data)
     };
-    ws.onclose = function () {
-        window.location.reload()
-    };
+    // ws.onclose = function () {
+    //     window.location.reload()
+    // };
 </script>
 </body>
 </html>
