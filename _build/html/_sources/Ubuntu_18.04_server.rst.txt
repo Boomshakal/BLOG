@@ -58,6 +58,23 @@ Ubuntu 18.04 server 修改 apt 软件源为阿里云的源
     sudo passwd root
     ## 输入两次密码
 
+关闭sudo密码
+============
+
+.. code:: shell
+
+    sudo visudo
+
+    # %sudo ALL=(ALL:ALL) ALL
+    %sudo ALL=(ALL:ALL) NOPASSWD:ALL
+
+关闭UTC时间同步(双系统)
+=======================
+
+.. code:: shell
+
+    timedatectl set-local-rtc 1 --adjust-system-clock
+
 xshell上传下载文件
 ==================
 
@@ -162,6 +179,43 @@ DirName
 
 压缩：lha -a FileName.lha FileName
 
+配置全局环境变量
+================
+
+查看PATH：echo
+:math:`PATH 以添加mongodb server为列 修改方法一： export PATH=/usr/local/mongodb/bin:`\ PATH
+//配置完后可以通过echo $PATH查看配置结果。 生效方法：立即生效
+有效期限：临时改变，只能在当前的终端窗口中有效，当前窗口关闭后就会恢复原有的path配置
+用户局限：仅对当前用户
+
+修改方法二： 通过修改.bashrc文件: vim ~/.bashrc //在最后一行添上：
+export PATH=/usr/local/mongodb/bin:$PATH 生效方法：（有以下两种）
+1、关闭当前终端窗口，重新打开一个新终端窗口就能生效 2、输入“source
+~/.bashrc”命令，立即生效 有效期限：永久有效 用户局限：仅对当前用户
+
+修改方法三: 通过修改profile文件: vim /etc/profile /export PATH
+//找到设置PATH的行，添加 export PATH=/usr/local/mongodb/bin:$PATH
+生效方法：系统重启 有效期限：永久有效 用户局限：对所有用户
+
+.. code:: shell
+
+    # 添加环境变量
+    echo 'export PATH=$PATH:/usr/local/mongodb/bin' >>  /etc/profile 
+    source /etc/profile
+
+修改方法四: 通过修改environment文件: vim /etc/environment
+在PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games"中加入“:/usr/local/mongodb/bin”
+生效方法：系统重启 有效期限：永久有效 用户局限：对所有用户
+
+创建软链接
+----------
+
+.. code:: shell
+
+    ln -s /usr/local/python3/bin/python3.7 /usr/bin/python3
+
+    ln -s /usr/local/python3/bin/pip3 /usr/bin/pip3
+
 scp传输文件
 ===========
 
@@ -198,6 +252,27 @@ scp [参数] : :
     Categories=Development;
 
     sudo cp Postman.desktop /usr/share/applications/
+
+rmp格式安装包转deb
+==================
+
+.. code:: shell
+
+    # 添加 Universe 仓库（如果未添加）
+    sudo add-apt-repository universe
+
+    # 更新
+    sudo apt update
+
+    # 安装 Alien
+    sudo apt install alien
+
+    # 将.rpm 包转换为.deb 包
+    #（当前目录下会生成一个 deb 安装包，比如: XMind-2020.deb）
+    sudo alien XMind-2020.rpm
+
+    # 安装
+    sudo dpkg -i XMind-2020.deb
 
 安装GNOME桌面
 =============
@@ -258,6 +333,52 @@ https://blog.csdn.net/zhangtao\_heu/article/details/81989147
        workon Django  激活虚拟环境
        deactivate     注销当前已经被激活的虚拟环境
        lsvirtualenv   显示已安装虚拟环境
+       rmvirtualenv   删除虚拟环境
+
+pip 国内源
+==========
+
+.. code:: shell
+
+    pip install xxx -i https://pypi.douban.com/simple/
+    pip install -r requirements.txt -i https://pypi.douban.com/simple/
+
+.. code:: shell
+
+    mkdir ~/.pip
+    vim ~/.pip/pip.conf
+    # 然后将下面这两行复制进去就好了
+    [global]
+    index-url = https://mirrors.aliyun.com/pypi/simple
+
+国内其他pip源
+
+清华：https://pypi.tuna.tsinghua.edu.cn/simple 中国科技大学
+https://pypi.mirrors.ustc.edu.cn/simple/
+华中理工大学：http://pypi.hustunique.com/
+山东理工大学：http://pypi.sdutlinux.org/
+豆瓣：http://pypi.douban.com/simple/
+
+注意：不管你用的是pip3还是pip，方法都是一样的，都是创建pip文件夹。
+
+命令后台运行
+============
+
+后台运行
+~~~~~~~~
+
+这种命令要满足1.要运行一段时间2.不需要与用户交互
+
+命令在后台运行 命令 & 这种会绑定终端，终端一关，进程结束
+
+ctrl+Z 放到后台暂停
+
+让命令在后台持久运行
+~~~~~~~~~~~~~~~~~~~~
+
+将命令放到/etc/rc.local中，系统启动时执行里面命令，因不是终端启动所以不受影响
+
+脱离终端，关了终端也可运行 nohup 命令 &
 
 查看端口
 ========
@@ -266,6 +387,8 @@ https://blog.csdn.net/zhangtao\_heu/article/details/81989147
 
     ps -ef|grep 8000
     netstat -tunlp|grep 8000
+    # netstat -apn | grep 8000
+    kill -9 4438
 
 防火墙
 ======
@@ -506,6 +629,216 @@ mysql数据备份与恢复
 .. code:: shell
 
     mysql -uroot -p  <  /data/AllMysql.dump
+
+mysql集群(多实例)
+-----------------
+
+什么是MySQL多实例
+~~~~~~~~~~~~~~~~~
+
+MySQL多实例就是在一台机器上开启多个不同的服务端口（如：3306，3307，3308），运行多个MySQL服务进程，通过不同的socket监听不同的服务端口来提供各自的服务。
+
+MySQL多实例的特点有以下几点
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-  有效利用服务器资源，当单个服务器资源有剩余时，可以充分利用剩余的资源提供更多的服务。
+-  节约服务器资源
+-  资源互相抢占问题，当某个服务实例服务并发很高时或者开启慢查询时，会消耗更多的内存、CPU、磁盘IO资源，导致服务器上的其他实例提供服务的质量下降；
+
+部署mysql多实例的两种方式
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+第一种是使用\ ``多个配置文件``\ 启动不同的进程来实现多实例，这种方式的优势逻辑简单，配置简单，缺点是管理起来不太方便；
+
+第二种是通过官方自带的\ ``mysqld_multi``\ 使用单独的配置文件来实现多实例，这种方式定制每个实例的配置不太方面，优点是管理起来很方便，集中管理；
+
+同一开发环境下安装多个数据库，必须处理以下问题
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-  配置文件安装路径不能相同
+-  数据库目录不能相同
+-  启动脚本不能同名
+-  端口不能相同
+-  socket文件的生成路径不能相同
+
+mysql多实例搭建
+---------------
+
+mysqld\_multi搭建
+~~~~~~~~~~~~~~~~~
+
+1. 下载免编译二进制包
+
+.. code:: shell
+
+    wget http://mirrors.sohu.com/mysql/MySQL-5.7/mysql-5.7.23-linux-glibc2.12-x86_64.tar.gz
+
+    tar -zxvf mysql-5.7.23-linux-glibc2.12-x86_64.tar.gz
+    mv mysql-5.7.23-linux-glibc2.12-x86_64 /usr/local/mysql
+
+    # 关闭iptables
+    service iptables stop  #临时关闭
+    chkconfig iptables off  #永久关闭
+
+    # 关闭selinux
+    vi /etc/sysconfig/selinux 
+    SELINUX=DISABLED
+
+    # 创建mysql系统用户和组
+    groupadd -g 27 mysql
+    useradd -u 27 -g mysql mysql
+    id mysql
+
+    # 创建mysql目录
+    mkdir -p /data/mysql/mysql_3306/data
+    mkdir -p /data/mysql/mysql_3306/log
+    mkdir -p /data/mysql/mysql_3306/tmp
+    mkdir -p /data/mysql/mysql_3307/data
+    mkdir -p /data/mysql/mysql_3307/log
+    mkdir -p /data/mysql/mysql_3307/tmp
+    mkdir -p /data/mysql/mysql_3308/data
+    mkdir -p /data/mysql/mysql_3308/log
+    mkdir -p /data/mysql/mysql_3308/tmp
+
+    # 更改目录权限
+    chown -R mysql:mysql /data/mysql/ 
+    chown -R mysql:mysql /usr/local/mysql/
+    # 添加环境变量
+    echo 'export PATH=$PATH:/usr/local/mysql/bin' >>  /etc/profile 
+    source /etc/profile
+
+    # 复制my.cnf文件到etc目录 会将原来的my.cnf文件删除了
+    cp /etc/my.cnf /etc/my.cnf.bak
+    cp /usr/local/mysql/support-files/my-default.cnf /etc/my.cnf
+
+2. 修改my.cnf（在一个文件中修改即可）
+
+.. code:: shell
+
+    vim /etc/my.conf
+
+    [client]
+    port=3306
+    socket=/tmp/mysql.sock 
+
+    [mysqld_multi]
+    mysqld = /usr/local/mysql/bin/mysqld_safe
+    mysqladmin = /usr/local/mysql/bin/mysqladmin
+    log = /data/mysql/mysqld_multi.log 
+
+    [mysqld]
+    basedir = /usr/local/mysql
+    sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES 
+
+    #3306数据库
+
+    [mysqld3306]
+    mysqld=mysqld
+    mysqladmin=mysqladmin
+    datadir=/data/mysql/mysql_3306/data
+    port=3306
+    server_id=3306
+    socket=/tmp/mysql_3306.sock
+    log-output=file
+    slow_query_log = 1
+    long_query_time = 1
+    slow_query_log_file = /data/mysql/mysql_3306/log/slow.log
+    log-error = /data/mysql/mysql_3306/log/error.log
+    binlog_format = mixed
+    log-bin = /data/mysql/mysql_3306/log/mysql3306_bin 
+
+    #3307数据库
+
+    [mysqld3307]
+    mysqld=mysqld
+    mysqladmin=mysqladmin
+    datadir=/data/mysql/mysql_3307/data
+    port=3307
+    server_id=3307
+    socket=/tmp/mysql_3307.sock
+    log-output=file
+    slow_query_log = 1
+    long_query_time = 1
+    slow_query_log_file = /data/mysql/mysql_3307/log/slow.log
+    log-error = /data/mysql/mysql_3307/log/error.log
+    binlog_format = mixed
+    log-bin = /data/mysql/mysql_3307/log/mysql3307_bin 
+
+    #3308数据库
+
+    [mysqld3308]
+    mysqld=mysqld
+    mysqladmin=mysqladmin
+    datadir=/data/mysql/mysql_3308/data
+    port=3308
+    server_id=3308
+    socket=/tmp/mysql_3308.sock
+    log-output=file
+    slow_query_log = 1
+    long_query_time = 1
+    slow_query_log_file = /data/mysql/mysql_3308/log/slow.log
+    log-error = /data/mysql/mysql_3308/log/error.log
+    binlog_format = mixed
+    log-bin = /data/mysql/mysql_3308/log/mysql3308_bin
+
+3. 初始化数据库
+
+.. code:: shell
+
+    # 初始化3306数据库
+    /usr/local/mysql/scripts/mysql_install_db --basedir=/usr/local/mysql/ --datadir=/data/mysql/mysql_3306/data --defaults-file=/etc/my.cnf  
+
+    /usr/local/mysql/scripts/mysql_install_db --basedir=/usr/local/mysql/ --datadir=/data/mysql/mysql_3307/data --defaults-file=/etc/my.cnf
+
+    /usr/local/mysql/scripts/mysql_install_db --basedir=/usr/local/mysql/ --datadir=/data/mysql/mysql_3308/data --defaults-file=/etc/my.cnf
+
+4. 查看数据库初始化是否成功
+
+.. code:: shell
+
+    cd /data/mysql/mysql_3306/data/
+    cd /data/mysql/mysql_3307/data/
+    cd /data/mysql/mysql_3308/data/
+
+5. 设置启动文件
+
+.. code:: shell
+
+    cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
+
+6. mysqld\_multi进行多实例管理
+
+.. code:: shell
+
+    启动全部实例：/usr/local/mysql/bin/mysqld_multi start
+
+    查看全部实例状态：/usr/local/mysql/bin/mysqld_multi report 
+
+    启动单个实例：/usr/local/mysql/bin/mysqld_multi start 3306 
+
+    停止单个实例：/usr/local/mysql/bin/mysqld_multi stop 3306 
+
+    查看单个实例状态：/usr/local/mysql/bin/mysqld_multi report 3306 
+
+    # 启动全部实例
+    /usr/local/mysql/bin/mysqld_multi start
+    /usr/local/mysql/bin/mysqld_multi report
+
+    # 查看启动进程
+    ps -aux | grep mysql
+
+    # 查看sock文件
+    cd /tmp
+    ls mysql*.sock
+
+    # 修改密码
+    mysql -S /tmp/mysql_3306.sock
+    set password for root@'localhost'=password('xxxxxx');
+    flush privileges;
+
+    # 新建用户及授权
+    grant ALL PRIVILEGES on *.* to admin@'%' identified by 'xxxxxx';
+    flush privileges
 
 mysql主从复制
 -------------
@@ -1031,6 +1364,28 @@ Redis集群 redis-cluster
     sudo service mongod restart
     sudo service mongod stop
     sudo service mongod start
+
+8. 增删改查
+
+.. code:: sql
+
+    show databases; #查看已有数据库
+    use dataName; #选择数据库，如果不存在库，则会自动创建。
+    show tables; # 查看已有的表
+    show collections # 同上,
+    db.createCollection('表名');#建表
+    db.表名.drop(); #删除表
+
+    注:table在mongodb里叫collections
+
+    增加数据，语法: db.collectionName.isnert(document)
+
+    删除数据，语法: db.collection.remove(查询表达式,
+    选项)。选项是指需要删除的文档数，{0/1}，默认是0，删除全部文档
+
+    修改数据，语法: db.collection.update(查询表达式,新值);
+
+    查找数据，语法: db.collection.find(查询表达式,查询的列)。
 
 Nginx配置
 =========
@@ -1768,3 +2123,40 @@ FastDFS文件管理系统
 .. code:: shell
 
     pip install fdfs_client-py-master.zip
+
+Ubuntu搭建KMS服务器
+===================
+
+1. 在任意环境中，下载最新的vlmcsd
+   releases版本，\ `下载地址 <https://github.com/Wind4/vlmcsd/releases>`__\ 。如在linux中，可以使用wget下载
+
+.. code:: shell
+
+    wget https://github.com/Wind4/vlmcsd/releases/download/svn1111/binaries.tar.gz
+
+2. 解压安装包
+
+.. code:: shell
+
+    tar -zxvf binaries.tar.gz
+
+3. 运行脚本
+
+.. code:: shell
+
+    cd binaries/Linux/intel/static/
+    ./vlmcsd-x64-musl-static
+
+    # 查看1688端口
+    netstat -lnp|grep 1688
+    ps aux | grep vlmcsd
+
+4. 激活windows系统
+
+.. code:: shell
+
+    slmgr /skms 你的Ubuntu的IP地址（Ubuntu中使用ifconfig查看IP地址）
+    slmgr /ato
+
+    # 验证激活
+    slmgr.vbs -dlv

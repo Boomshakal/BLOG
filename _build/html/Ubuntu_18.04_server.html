@@ -26,6 +26,7 @@
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
         <script src="_static/translations.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -85,38 +86,58 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Ubuntu 18.04 server 修改 apt 软件源为阿里云的源</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#root">设置root密码</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#sudo">关闭sudo密码</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#utc">关闭UTC时间同步(双系统)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#xshell">xshell上传下载文件</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#id1">安装压缩包</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id2">配置全局环境变量</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id3">创建软链接</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="#scp">scp传输文件</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id2">配置桌面快捷方式</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id4">配置桌面快捷方式</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#rmpdeb">rmp格式安装包转deb</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#gnome">安装GNOME桌面</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#python">安装Python虚拟环境</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id3">查看端口</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id4">防火墙</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#pip">pip 国内源</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id5">命令后台运行</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id6">查看端口</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id7">防火墙</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#linux">linux 字符编码</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#dns">DNS 配置文件</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#blog">创建自己的BLOG</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#sphinx">Sphinx生成网页</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#markdown">Markdown</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id5">修改主题</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id8">修改主题</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pandoc">Pandoc格式转换</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="#id6">Linux 定时任务</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id9">Linux 定时任务</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#mysql">mysql安装</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id7">mysql数据备份与恢复</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id8">mysql主从复制</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id10">mysql数据备份与恢复</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id11">mysql集群(多实例)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id12">什么是MySQL多实例</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id13">MySQL多实例的特点有以下几点</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id14">部署mysql多实例的两种方式</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id15">同一开发环境下安装多个数据库，必须处理以下问题</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id16">mysql多实例搭建</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#mysqld-multi">mysqld_multi搭建</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id17">mysql主从复制</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#redis">安装Redis</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id9">redis 持久化与发布订阅</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id10">发布订阅</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#id11">持久化</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id18">redis 持久化与发布订阅</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id19">发布订阅</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id20">持久化</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#redisrdbaof">redis不重启之rdb数据切换到aof数据</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#id12">redis 主从同步</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id13">手动切换主从关系</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id21">redis 主从同步</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id22">手动切换主从关系</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#redis-redis-sentinel">redis哨兵 Redis-Sentinel</a></li>
@@ -125,8 +146,8 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#mongodb">安装MongoDB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#nginx">Nginx配置</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id14">Nginx反向代理</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id15">Nginx负载均衡</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id23">Nginx反向代理</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id24">Nginx负载均衡</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#uwsgi">uWSGI配置</a></li>
@@ -141,6 +162,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#nginxfastdfs-nginx-module">安装nginx及fastdfs-nginx-module</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="#ubuntukms">Ubuntu搭建KMS服务器</a></li>
 <li class="toctree-l1"><a class="reference internal" href="django_restframework.html">django restframework</a></li>
 </ul>
 
@@ -265,6 +287,21 @@ sudo <span class="nb">echo</span> <span class="s1">&#39;deb http://package.eleme
 </pre></div>
 </div>
 </div>
+<div class="section" id="sudo">
+<h1>关闭sudo密码<a class="headerlink" href="#sudo" title="永久链接至标题">¶</a></h1>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo visudo
+
+<span class="c1"># %sudo ALL=(ALL:ALL) ALL</span>
+%sudo <span class="nv">ALL</span><span class="o">=(</span>ALL:ALL<span class="o">)</span> NOPASSWD:ALL
+</pre></div>
+</div>
+</div>
+<div class="section" id="utc">
+<h1>关闭UTC时间同步(双系统)<a class="headerlink" href="#utc" title="永久链接至标题">¶</a></h1>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>timedatectl set-local-rtc <span class="m">1</span> --adjust-system-clock
+</pre></div>
+</div>
+</div>
 <div class="section" id="xshell">
 <h1>xshell上传下载文件<a class="headerlink" href="#xshell" title="永久链接至标题">¶</a></h1>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo apt install  lrzsz -y
@@ -324,6 +361,37 @@ DirName</p>
 <p>解压：lha -e FileName.lha</p>
 <p>压缩：lha -a FileName.lha FileName</p>
 </div>
+<div class="section" id="id2">
+<h1>配置全局环境变量<a class="headerlink" href="#id2" title="永久链接至标题">¶</a></h1>
+<p>查看PATH：echo
+<span class="math notranslate nohighlight">\(PATH 以添加mongodb server为列 修改方法一： export PATH=/usr/local/mongodb/bin:\)</span>PATH
+//配置完后可以通过echo $PATH查看配置结果。 生效方法：立即生效
+有效期限：临时改变，只能在当前的终端窗口中有效，当前窗口关闭后就会恢复原有的path配置
+用户局限：仅对当前用户</p>
+<p>修改方法二： 通过修改.bashrc文件: vim ~/.bashrc //在最后一行添上：
+export PATH=/usr/local/mongodb/bin:$PATH 生效方法：（有以下两种）
+1、关闭当前终端窗口，重新打开一个新终端窗口就能生效 2、输入“source
+~/.bashrc”命令，立即生效 有效期限：永久有效 用户局限：仅对当前用户</p>
+<p>修改方法三: 通过修改profile文件: vim /etc/profile /export PATH
+//找到设置PATH的行，添加 export PATH=/usr/local/mongodb/bin:$PATH
+生效方法：系统重启 有效期限：永久有效 用户局限：对所有用户</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># 添加环境变量</span>
+<span class="nb">echo</span> <span class="s1">&#39;export PATH=$PATH:/usr/local/mongodb/bin&#39;</span> &gt;&gt;  /etc/profile
+<span class="nb">source</span> /etc/profile
+</pre></div>
+</div>
+<p>修改方法四: 通过修改environment文件: vim /etc/environment
+在PATH=”/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games”中加入“:/usr/local/mongodb/bin”
+生效方法：系统重启 有效期限：永久有效 用户局限：对所有用户</p>
+<div class="section" id="id3">
+<h2>创建软链接<a class="headerlink" href="#id3" title="永久链接至标题">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>ln -s /usr/local/python3/bin/python3.7 /usr/bin/python3
+
+ln -s /usr/local/python3/bin/pip3 /usr/bin/pip3
+</pre></div>
+</div>
+</div>
+</div>
 <div class="section" id="scp">
 <h1>scp传输文件<a class="headerlink" href="#scp" title="永久链接至标题">¶</a></h1>
 <p>scp [参数] : :</p>
@@ -336,8 +404,8 @@ scp -r /home/soft root@192.168.132.132:/
 </pre></div>
 </div>
 </div>
-<div class="section" id="id2">
-<h1>配置桌面快捷方式<a class="headerlink" href="#id2" title="永久链接至标题">¶</a></h1>
+<div class="section" id="id4">
+<h1>配置桌面快捷方式<a class="headerlink" href="#id4" title="永久链接至标题">¶</a></h1>
 <p>创建desktop文件</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>vim Postman.desktop
 
@@ -351,6 +419,26 @@ scp -r /home/soft root@192.168.132.132:/
 <span class="nv">Categories</span><span class="o">=</span>Development<span class="p">;</span>
 
 sudo cp Postman.desktop /usr/share/applications/
+</pre></div>
+</div>
+</div>
+<div class="section" id="rmpdeb">
+<h1>rmp格式安装包转deb<a class="headerlink" href="#rmpdeb" title="永久链接至标题">¶</a></h1>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># 添加 Universe 仓库（如果未添加）</span>
+sudo add-apt-repository universe
+
+<span class="c1"># 更新</span>
+sudo apt update
+
+<span class="c1"># 安装 Alien</span>
+sudo apt install alien
+
+<span class="c1"># 将.rpm 包转换为.deb 包</span>
+<span class="c1">#（当前目录下会生成一个 deb 安装包，比如: XMind-2020.deb）</span>
+sudo alien XMind-2020.rpm
+
+<span class="c1"># 安装</span>
+sudo dpkg -i XMind-2020.deb
 </pre></div>
 </div>
 </div>
@@ -407,20 +495,52 @@ source /usr/share/virtualenvwrapper/virtualenvwrapper.sh</p>
 workon Django  激活虚拟环境
 deactivate     注销当前已经被激活的虚拟环境
 lsvirtualenv   显示已安装虚拟环境
+rmvirtualenv   删除虚拟环境
 </pre></div>
 </div>
 </li>
 </ol>
 </div>
-<div class="section" id="id3">
-<h1>查看端口<a class="headerlink" href="#id3" title="永久链接至标题">¶</a></h1>
+<div class="section" id="pip">
+<h1>pip 国内源<a class="headerlink" href="#pip" title="永久链接至标题">¶</a></h1>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install xxx -i https://pypi.douban.com/simple/
+pip install -r requirements.txt -i https://pypi.douban.com/simple/
+</pre></div>
+</div>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>mkdir ~/.pip
+vim ~/.pip/pip.conf
+<span class="c1"># 然后将下面这两行复制进去就好了</span>
+<span class="o">[</span>global<span class="o">]</span>
+index-url <span class="o">=</span> https://mirrors.aliyun.com/pypi/simple
+</pre></div>
+</div>
+<p>国内其他pip源</p>
+<p>清华：<a class="reference external" href="https://pypi.tuna.tsinghua.edu.cn/simple">https://pypi.tuna.tsinghua.edu.cn/simple</a> 中国科技大学
+<a class="reference external" href="https://pypi.mirrors.ustc.edu.cn/simple/">https://pypi.mirrors.ustc.edu.cn/simple/</a>
+华中理工大学：<a class="reference external" href="http://pypi.hustunique.com/">http://pypi.hustunique.com/</a>
+山东理工大学：<a class="reference external" href="http://pypi.sdutlinux.org/">http://pypi.sdutlinux.org/</a>
+豆瓣：<a class="reference external" href="http://pypi.douban.com/simple/">http://pypi.douban.com/simple/</a></p>
+<p>注意：不管你用的是pip3还是pip，方法都是一样的，都是创建pip文件夹。</p>
+</div>
+<div class="section" id="id5">
+<h1>命令后台运行<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h1>
+<p>这种命令要满足1.要运行一段时间2.不需要与用户交互</p>
+<p>命令在后台运行 命令 &amp; 这种会绑定终端，终端一关，进程结束</p>
+<p>ctrl+Z 放到后台暂停</p>
+<p>将命令放到/etc/rc.local中，系统启动时执行里面命令，因不是终端启动所以不受影响</p>
+<p>脱离终端，关了终端也可运行 nohup 命令 &amp;</p>
+</div>
+<div class="section" id="id6">
+<h1>查看端口<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h1>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>ps -ef<span class="p">|</span>grep <span class="m">8000</span>
 netstat -tunlp<span class="p">|</span>grep <span class="m">8000</span>
+<span class="c1"># netstat -apn | grep 8000</span>
+<span class="nb">kill</span> -9 <span class="m">4438</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id4">
-<h1>防火墙<a class="headerlink" href="#id4" title="永久链接至标题">¶</a></h1>
+<div class="section" id="id7">
+<h1>防火墙<a class="headerlink" href="#id7" title="永久链接至标题">¶</a></h1>
 <ul class="simple">
 <li><p>selinux 内置防火墙</p></li>
 </ul>
@@ -507,8 +627,8 @@ make html
 </pre></div>
 </div>
 </div>
-<div class="section" id="id5">
-<h2>修改主题<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id8">
+<h2>修改主题<a class="headerlink" href="#id8" title="永久链接至标题">¶</a></h2>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>import sphinx_rtd_theme
 
 <span class="nv">html_theme</span> <span class="o">=</span> <span class="s1">&#39;sphinx_rtd_theme&#39;</span>
@@ -524,8 +644,8 @@ make html
 </div>
 </div>
 </div>
-<div class="section" id="id6">
-<h1>Linux 定时任务<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h1>
+<div class="section" id="id9">
+<h1>Linux 定时任务<a class="headerlink" href="#id9" title="永久链接至标题">¶</a></h1>
 <ol class="arabic">
 <li><p>查看crontab crontab -l</p></li>
 <li><p>编辑crontab crontab -e</p></li>
@@ -633,8 +753,8 @@ grant all privileges on *.* to root@<span class="s1">&#39;%&#39;</span>  identif
 flush privileges<span class="p">;</span>
 </pre></div>
 </div>
-<div class="section" id="id7">
-<h2>mysql数据备份与恢复<a class="headerlink" href="#id7" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id10">
+<h2>mysql数据备份与恢复<a class="headerlink" href="#id10" title="永久链接至标题">¶</a></h2>
 <ol class="arabic simple">
 <li><p>导出数据库</p></li>
 </ol>
@@ -654,8 +774,217 @@ flush privileges<span class="p">;</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id8">
-<h2>mysql主从复制<a class="headerlink" href="#id8" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id11">
+<h2>mysql集群(多实例)<a class="headerlink" href="#id11" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id12">
+<h3>什么是MySQL多实例<a class="headerlink" href="#id12" title="永久链接至标题">¶</a></h3>
+<p>MySQL多实例就是在一台机器上开启多个不同的服务端口（如：3306，3307，3308），运行多个MySQL服务进程，通过不同的socket监听不同的服务端口来提供各自的服务。</p>
+</div>
+<div class="section" id="id13">
+<h3>MySQL多实例的特点有以下几点<a class="headerlink" href="#id13" title="永久链接至标题">¶</a></h3>
+<ul class="simple">
+<li><p>有效利用服务器资源，当单个服务器资源有剩余时，可以充分利用剩余的资源提供更多的服务。</p></li>
+<li><p>节约服务器资源</p></li>
+<li><p>资源互相抢占问题，当某个服务实例服务并发很高时或者开启慢查询时，会消耗更多的内存、CPU、磁盘IO资源，导致服务器上的其他实例提供服务的质量下降；</p></li>
+</ul>
+</div>
+<div class="section" id="id14">
+<h3>部署mysql多实例的两种方式<a class="headerlink" href="#id14" title="永久链接至标题">¶</a></h3>
+<p>第一种是使用<code class="docutils literal notranslate"><span class="pre">多个配置文件</span></code>启动不同的进程来实现多实例，这种方式的优势逻辑简单，配置简单，缺点是管理起来不太方便；</p>
+<p>第二种是通过官方自带的<code class="docutils literal notranslate"><span class="pre">mysqld_multi</span></code>使用单独的配置文件来实现多实例，这种方式定制每个实例的配置不太方面，优点是管理起来很方便，集中管理；</p>
+</div>
+<div class="section" id="id15">
+<h3>同一开发环境下安装多个数据库，必须处理以下问题<a class="headerlink" href="#id15" title="永久链接至标题">¶</a></h3>
+<ul class="simple">
+<li><p>配置文件安装路径不能相同</p></li>
+<li><p>数据库目录不能相同</p></li>
+<li><p>启动脚本不能同名</p></li>
+<li><p>端口不能相同</p></li>
+<li><p>socket文件的生成路径不能相同</p></li>
+</ul>
+</div>
+</div>
+<div class="section" id="id16">
+<h2>mysql多实例搭建<a class="headerlink" href="#id16" title="永久链接至标题">¶</a></h2>
+<div class="section" id="mysqld-multi">
+<h3>mysqld_multi搭建<a class="headerlink" href="#mysqld-multi" title="永久链接至标题">¶</a></h3>
+<ol class="arabic simple">
+<li><p>下载免编译二进制包</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>wget http://mirrors.sohu.com/mysql/MySQL-5.7/mysql-5.7.23-linux-glibc2.12-x86_64.tar.gz
+
+tar -zxvf mysql-5.7.23-linux-glibc2.12-x86_64.tar.gz
+mv mysql-5.7.23-linux-glibc2.12-x86_64 /usr/local/mysql
+
+<span class="c1"># 关闭iptables</span>
+service iptables stop  <span class="c1">#临时关闭</span>
+chkconfig iptables off  <span class="c1">#永久关闭</span>
+
+<span class="c1"># 关闭selinux</span>
+vi /etc/sysconfig/selinux
+<span class="nv">SELINUX</span><span class="o">=</span>DISABLED
+
+<span class="c1"># 创建mysql系统用户和组</span>
+groupadd -g <span class="m">27</span> mysql
+useradd -u <span class="m">27</span> -g mysql mysql
+id mysql
+
+<span class="c1"># 创建mysql目录</span>
+mkdir -p /data/mysql/mysql_3306/data
+mkdir -p /data/mysql/mysql_3306/log
+mkdir -p /data/mysql/mysql_3306/tmp
+mkdir -p /data/mysql/mysql_3307/data
+mkdir -p /data/mysql/mysql_3307/log
+mkdir -p /data/mysql/mysql_3307/tmp
+mkdir -p /data/mysql/mysql_3308/data
+mkdir -p /data/mysql/mysql_3308/log
+mkdir -p /data/mysql/mysql_3308/tmp
+
+<span class="c1"># 更改目录权限</span>
+chown -R mysql:mysql /data/mysql/
+chown -R mysql:mysql /usr/local/mysql/
+<span class="c1"># 添加环境变量</span>
+<span class="nb">echo</span> <span class="s1">&#39;export PATH=$PATH:/usr/local/mysql/bin&#39;</span> &gt;&gt;  /etc/profile
+<span class="nb">source</span> /etc/profile
+
+<span class="c1"># 复制my.cnf文件到etc目录 会将原来的my.cnf文件删除了</span>
+cp /etc/my.cnf /etc/my.cnf.bak
+cp /usr/local/mysql/support-files/my-default.cnf /etc/my.cnf
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>修改my.cnf（在一个文件中修改即可）</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>vim /etc/my.conf
+
+<span class="o">[</span>client<span class="o">]</span>
+<span class="nv">port</span><span class="o">=</span><span class="m">3306</span>
+<span class="nv">socket</span><span class="o">=</span>/tmp/mysql.sock
+
+<span class="o">[</span>mysqld_multi<span class="o">]</span>
+<span class="nv">mysqld</span> <span class="o">=</span> /usr/local/mysql/bin/mysqld_safe
+<span class="nv">mysqladmin</span> <span class="o">=</span> /usr/local/mysql/bin/mysqladmin
+<span class="nv">log</span> <span class="o">=</span> /data/mysql/mysqld_multi.log
+
+<span class="o">[</span>mysqld<span class="o">]</span>
+<span class="nv">basedir</span> <span class="o">=</span> /usr/local/mysql
+<span class="nv">sql_mode</span><span class="o">=</span>NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
+
+<span class="c1">#3306数据库</span>
+
+<span class="o">[</span>mysqld3306<span class="o">]</span>
+<span class="nv">mysqld</span><span class="o">=</span>mysqld
+<span class="nv">mysqladmin</span><span class="o">=</span>mysqladmin
+<span class="nv">datadir</span><span class="o">=</span>/data/mysql/mysql_3306/data
+<span class="nv">port</span><span class="o">=</span><span class="m">3306</span>
+<span class="nv">server_id</span><span class="o">=</span><span class="m">3306</span>
+<span class="nv">socket</span><span class="o">=</span>/tmp/mysql_3306.sock
+log-output<span class="o">=</span>file
+<span class="nv">slow_query_log</span> <span class="o">=</span> <span class="m">1</span>
+<span class="nv">long_query_time</span> <span class="o">=</span> <span class="m">1</span>
+<span class="nv">slow_query_log_file</span> <span class="o">=</span> /data/mysql/mysql_3306/log/slow.log
+log-error <span class="o">=</span> /data/mysql/mysql_3306/log/error.log
+<span class="nv">binlog_format</span> <span class="o">=</span> mixed
+log-bin <span class="o">=</span> /data/mysql/mysql_3306/log/mysql3306_bin
+
+<span class="c1">#3307数据库</span>
+
+<span class="o">[</span>mysqld3307<span class="o">]</span>
+<span class="nv">mysqld</span><span class="o">=</span>mysqld
+<span class="nv">mysqladmin</span><span class="o">=</span>mysqladmin
+<span class="nv">datadir</span><span class="o">=</span>/data/mysql/mysql_3307/data
+<span class="nv">port</span><span class="o">=</span><span class="m">3307</span>
+<span class="nv">server_id</span><span class="o">=</span><span class="m">3307</span>
+<span class="nv">socket</span><span class="o">=</span>/tmp/mysql_3307.sock
+log-output<span class="o">=</span>file
+<span class="nv">slow_query_log</span> <span class="o">=</span> <span class="m">1</span>
+<span class="nv">long_query_time</span> <span class="o">=</span> <span class="m">1</span>
+<span class="nv">slow_query_log_file</span> <span class="o">=</span> /data/mysql/mysql_3307/log/slow.log
+log-error <span class="o">=</span> /data/mysql/mysql_3307/log/error.log
+<span class="nv">binlog_format</span> <span class="o">=</span> mixed
+log-bin <span class="o">=</span> /data/mysql/mysql_3307/log/mysql3307_bin
+
+<span class="c1">#3308数据库</span>
+
+<span class="o">[</span>mysqld3308<span class="o">]</span>
+<span class="nv">mysqld</span><span class="o">=</span>mysqld
+<span class="nv">mysqladmin</span><span class="o">=</span>mysqladmin
+<span class="nv">datadir</span><span class="o">=</span>/data/mysql/mysql_3308/data
+<span class="nv">port</span><span class="o">=</span><span class="m">3308</span>
+<span class="nv">server_id</span><span class="o">=</span><span class="m">3308</span>
+<span class="nv">socket</span><span class="o">=</span>/tmp/mysql_3308.sock
+log-output<span class="o">=</span>file
+<span class="nv">slow_query_log</span> <span class="o">=</span> <span class="m">1</span>
+<span class="nv">long_query_time</span> <span class="o">=</span> <span class="m">1</span>
+<span class="nv">slow_query_log_file</span> <span class="o">=</span> /data/mysql/mysql_3308/log/slow.log
+log-error <span class="o">=</span> /data/mysql/mysql_3308/log/error.log
+<span class="nv">binlog_format</span> <span class="o">=</span> mixed
+log-bin <span class="o">=</span> /data/mysql/mysql_3308/log/mysql3308_bin
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>初始化数据库</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># 初始化3306数据库</span>
+/usr/local/mysql/scripts/mysql_install_db --basedir<span class="o">=</span>/usr/local/mysql/ --datadir<span class="o">=</span>/data/mysql/mysql_3306/data --defaults-file<span class="o">=</span>/etc/my.cnf
+
+/usr/local/mysql/scripts/mysql_install_db --basedir<span class="o">=</span>/usr/local/mysql/ --datadir<span class="o">=</span>/data/mysql/mysql_3307/data --defaults-file<span class="o">=</span>/etc/my.cnf
+
+/usr/local/mysql/scripts/mysql_install_db --basedir<span class="o">=</span>/usr/local/mysql/ --datadir<span class="o">=</span>/data/mysql/mysql_3308/data --defaults-file<span class="o">=</span>/etc/my.cnf
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>查看数据库初始化是否成功</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> /data/mysql/mysql_3306/data/
+<span class="nb">cd</span> /data/mysql/mysql_3307/data/
+<span class="nb">cd</span> /data/mysql/mysql_3308/data/
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>设置启动文件</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
+</pre></div>
+</div>
+<ol class="arabic simple" start="6">
+<li><p>mysqld_multi进行多实例管理</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>启动全部实例：/usr/local/mysql/bin/mysqld_multi start
+
+查看全部实例状态：/usr/local/mysql/bin/mysqld_multi report
+
+启动单个实例：/usr/local/mysql/bin/mysqld_multi start <span class="m">3306</span>
+
+停止单个实例：/usr/local/mysql/bin/mysqld_multi stop <span class="m">3306</span>
+
+查看单个实例状态：/usr/local/mysql/bin/mysqld_multi report <span class="m">3306</span>
+
+<span class="c1"># 启动全部实例</span>
+/usr/local/mysql/bin/mysqld_multi start
+/usr/local/mysql/bin/mysqld_multi report
+
+<span class="c1"># 查看启动进程</span>
+ps -aux <span class="p">|</span> grep mysql
+
+<span class="c1"># 查看sock文件</span>
+<span class="nb">cd</span> /tmp
+ls mysql*.sock
+
+<span class="c1"># 修改密码</span>
+mysql -S /tmp/mysql_3306.sock
+<span class="nb">set</span> password <span class="k">for</span> root@<span class="s1">&#39;localhost&#39;</span><span class="o">=</span>password<span class="o">(</span><span class="s1">&#39;xxxxxx&#39;</span><span class="o">)</span><span class="p">;</span>
+flush privileges<span class="p">;</span>
+
+<span class="c1"># 新建用户及授权</span>
+grant ALL PRIVILEGES on *.* to admin@<span class="s1">&#39;%&#39;</span> identified by <span class="s1">&#39;xxxxxx&#39;</span><span class="p">;</span>
+flush privileges
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="id17">
+<h2>mysql主从复制<a class="headerlink" href="#id17" title="永久链接至标题">¶</a></h2>
 <ol class="arabic simple">
 <li><p>设置master主库的配置文件</p></li>
 </ol>
@@ -798,10 +1127,10 @@ redis-cli -p <span class="m">6380</span> -a P@ssw0rd
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo grep -v <span class="s2">&quot;^#&quot;</span> /etc/redis/redis.conf <span class="p">|</span> grep -v <span class="s2">&quot;^</span>$<span class="s2">&quot;</span>
 </pre></div>
 </div>
-<div class="section" id="id9">
-<h2>redis 持久化与发布订阅<a class="headerlink" href="#id9" title="永久链接至标题">¶</a></h2>
-<div class="section" id="id10">
-<h3>发布订阅<a class="headerlink" href="#id10" title="永久链接至标题">¶</a></h3>
+<div class="section" id="id18">
+<h2>redis 持久化与发布订阅<a class="headerlink" href="#id18" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id19">
+<h3>发布订阅<a class="headerlink" href="#id19" title="永久链接至标题">¶</a></h3>
 <ul class="simple">
 <li><p>发布者 PUBLISH PUBLISH music reidslearn 给频道music发布消息</p></li>
 <li><p>接受者 SUBSCRIBE SUBSCRIBE music 订阅music频道 PSUBSCRIBE 频道*
@@ -809,8 +1138,8 @@ redis-cli -p <span class="m">6380</span> -a P@ssw0rd
 <li><p>频道 music</p></li>
 </ul>
 </div>
-<div class="section" id="id11">
-<h3>持久化<a class="headerlink" href="#id11" title="永久链接至标题">¶</a></h3>
+<div class="section" id="id20">
+<h3>持久化<a class="headerlink" href="#id20" title="永久链接至标题">¶</a></h3>
 <ul class="simple">
 <li><p>RDB持久化(数据快照)</p></li>
 </ul>
@@ -885,8 +1214,8 @@ redis-server rdb.conf
 </div>
 </div>
 </div>
-<div class="section" id="id12">
-<h2>redis 主从同步<a class="headerlink" href="#id12" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id21">
+<h2>redis 主从同步<a class="headerlink" href="#id21" title="永久链接至标题">¶</a></h2>
 <ol class="arabic simple">
 <li><p>准备三个.conf 文件</p></li>
 </ol>
@@ -929,8 +1258,8 @@ redis-server redis-6381.conf
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>redis-cli -p <span class="m">6379</span> info <span class="o">[</span>replication<span class="o">]</span>
 </pre></div>
 </div>
-<div class="section" id="id13">
-<h3>手动切换主从关系<a class="headerlink" href="#id13" title="永久链接至标题">¶</a></h3>
+<div class="section" id="id22">
+<h3>手动切换主从关系<a class="headerlink" href="#id22" title="永久链接至标题">¶</a></h3>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># 杀死6379的主库实例</span>
 <span class="nb">kill</span> - <span class="m">9</span> 主库PID
 
@@ -1176,6 +1505,28 @@ sudo service mongod stop
 sudo service mongod start
 </pre></div>
 </div>
+<ol class="arabic simple" start="8">
+<li><p>增删改查</p></li>
+</ol>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span>show databases; #查看已有数据库
+use dataName; #选择数据库，如果不存在库，则会自动创建。
+show tables; # 查看已有的表
+show collections # 同上,
+db.createCollection(&#39;表名&#39;);#建表
+db.表名.drop(); #删除表
+
+注:table在mongodb里叫collections
+
+增加数据，语法: db.collectionName.isnert(document)
+
+删除数据，语法: db.collection.remove(查询表达式,
+选项)。选项是指需要删除的文档数，{0/1}，默认是0，删除全部文档
+
+修改数据，语法: db.collection.update(查询表达式,新值);
+
+查找数据，语法: db.collection.find(查询表达式,查询的列)。
+</pre></div>
+</div>
 </div>
 <div class="section" id="nginx">
 <h1>Nginx配置<a class="headerlink" href="#nginx" title="永久链接至标题">¶</a></h1>
@@ -1326,8 +1677,8 @@ location / <span class="o">{</span>
         <span class="o">}</span>
 </pre></div>
 </div>
-<div class="section" id="id14">
-<h2>Nginx反向代理<a class="headerlink" href="#id14" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id23">
+<h2>Nginx反向代理<a class="headerlink" href="#id23" title="永久链接至标题">¶</a></h2>
 <ol class="arabic simple">
 <li><p>实验准备2个nginx服务器</p></li>
 </ol>
@@ -1350,8 +1701,8 @@ location / <span class="o">{</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id15">
-<h2>Nginx负载均衡<a class="headerlink" href="#id15" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id24">
+<h2>Nginx负载均衡<a class="headerlink" href="#id24" title="永久链接至标题">¶</a></h2>
 <ol class="arabic simple">
 <li><p>准备3台计算机</p></li>
 </ol>
@@ -1493,7 +1844,7 @@ uwsgi --http :8000 --module mysite.wsgi --py-autoreload<span class="o">=</span><
 </pre></div>
 </div>
 <ol class="arabic" start="6">
-<li><p class="rubric" id="id16">指定配置文件启动命令</p>
+<li><p class="rubric" id="id25">指定配置文件启动命令</p>
 </li>
 </ol>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>uwsgi --ini  /etc/uwsgi_nginx.ini
@@ -1905,6 +2256,43 @@ server <span class="o">{</span>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install fdfs_client-py-master.zip
 </pre></div>
 </div>
+</div>
+</div>
+<div class="section" id="ubuntukms">
+<h1>Ubuntu搭建KMS服务器<a class="headerlink" href="#ubuntukms" title="永久链接至标题">¶</a></h1>
+<ol class="arabic simple">
+<li><p>在任意环境中，下载最新的vlmcsd
+releases版本，<a class="reference external" href="https://github.com/Wind4/vlmcsd/releases">下载地址</a>。如在linux中，可以使用wget下载</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>wget https://github.com/Wind4/vlmcsd/releases/download/svn1111/binaries.tar.gz
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>解压安装包</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>tar -zxvf binaries.tar.gz
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>运行脚本</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> binaries/Linux/intel/static/
+./vlmcsd-x64-musl-static
+
+<span class="c1"># 查看1688端口</span>
+netstat -lnp<span class="p">|</span>grep <span class="m">1688</span>
+ps aux <span class="p">|</span> grep vlmcsd
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>激活windows系统</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>slmgr /skms 你的Ubuntu的IP地址（Ubuntu中使用ifconfig查看IP地址）
+slmgr /ato
+
+<span class="c1"># 验证激活</span>
+slmgr.vbs -dlv
+</pre></div>
 </div>
 </div>
 
