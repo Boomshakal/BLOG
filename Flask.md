@@ -87,7 +87,7 @@ request.json # 如果提交时请求头中的Content-Type:application/json 字�
 request.data # 如果提交时请求头中的Content-Type 无法被识别 将请求体中的原始数据存放 bytes
 request.cookies #获取Cookie中的数据
 request.headers # 获取请求头
-request.files # 序列化文件存储  save(path) file_name
+request.files # 序列化文件存储  save(path) filename
 ```
 
 

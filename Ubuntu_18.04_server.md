@@ -57,6 +57,29 @@ sudo apt-get update&&sudo apt-get upgrade&&sudo apt-get install -f
 sudo passwd root
 ## 输入两次密码
 ```
+
+
+# 关闭sudo密码
+
+```shell
+sudo visudo
+
+# %sudo ALL=(ALL:ALL) ALL
+%sudo ALL=(ALL:ALL) NOPASSWD:ALL
+```
+
+
+
+# 关闭UTC时间同步(双系统)
+
+```shell
+timedatectl set-local-rtc 1 --adjust-system-clock
+```
+
+
+
+
+
 # xshell上传下载文件
 ```shell
 sudo apt install  lrzsz -y
@@ -198,6 +221,14 @@ export PATH=/usr/local/mongodb/bin:$PATH
 有效期限：永久有效
 用户局限：对所有用户
 
+```shell
+# 添加环境变量
+echo 'export PATH=$PATH:/usr/local/mongodb/bin' >>  /etc/profile 
+source /etc/profile
+```
+
+
+
  
 
 修改方法四:
@@ -207,6 +238,18 @@ vim /etc/environment
 生效方法：系统重启
 有效期限：永久有效
 用户局限：对所有用户
+
+
+
+## 创建软链接
+
+```shell
+ln -s /usr/local/python3/bin/python3.7 /usr/bin/python3
+
+ln -s /usr/local/python3/bin/pip3 /usr/bin/pip3
+```
+
+
 
 
 
@@ -322,12 +365,37 @@ index-url = https://mirrors.aliyun.com/pypi/simple
 
 
 
+# 命令后台运行
+
+### 后台运行
+
+这种命令要满足1.要运行一段时间2.不需要与用户交互
+
+命令在后台运行
+命令 &
+这种会绑定终端，终端一关，进程结束
+
+ctrl+Z 放到后台暂停
+
+### 让命令在后台持久运行
+
+将命令放到/etc/rc.local中，系统启动时执行里面命令，因不是终端启动所以不受影响
+
+ 
+
+脱离终端，关了终端也可运行
+nohup 命令 &
+
+
+
 
 
 # 查看端口
 ```shell
 ps -ef|grep 8000
 netstat -tunlp|grep 8000
+# netstat -apn | grep 8000
+kill -9 4438
 ```
 
 # 防火墙
