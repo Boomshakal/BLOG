@@ -286,6 +286,30 @@ Categories=Development;
 
 sudo cp Postman.desktop /usr/share/applications/
 ```
+
+
+# rmp格式安装包转deb
+
+```shell
+# 添加 Universe 仓库（如果未添加）
+sudo add-apt-repository universe
+
+# 更新
+sudo apt update
+
+# 安装 Alien
+sudo apt install alien
+
+# 将.rpm 包转换为.deb 包
+#（当前目录下会生成一个 deb 安装包，比如: XMind-2020.deb）
+sudo alien XMind-2020.rpm
+
+# 安装
+sudo dpkg -i XMind-2020.deb
+```
+
+
+
 # 安装GNOME桌面
 
 1. 输入以下命令
