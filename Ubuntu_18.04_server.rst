@@ -75,6 +75,78 @@ Ubuntu 18.04 server 修改 apt 软件源为阿里云的源
 
     timedatectl set-local-rtc 1 --adjust-system-clock
 
+安装\ **安装 zsh 和 oh-my-zsh**
+===============================
+
+.. code:: shell
+
+    cat /etc/shells
+
+    # 安装 zsh
+    apt install zsh
+
+    # 将 zsh 设置为系统默认 shell
+    # sudo chsh -s /bin/zsh
+    chsh -s $(which zsh)
+
+    # 自动安装，如果你没安装 git 需要先安装 git
+    wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | sh
+
+    # 或者也可以选择手动安装
+    git clone git://github.com/robbyrussell/oh-my-zsh.git ~/.oh-my-zsh
+    cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
+
+ZSH 配置
+--------
+
+.. code:: shell
+
+    vim ~/.zshrc
+
+    alias cls='clear'
+    alias ll='ls -l'
+    alias la='ls -a'
+    alias vi='vim'
+    alias grep="grep --color=auto"
+
+    # 或者选择 zsh 的主题
+    # oh-my-zsh 内置了很多主题，对应的主题文件存放在 ~/.oh-my-zsh/themes 目录下，你可以根据自己的喜好选择或者编辑主题。
+    ZSH_THEME="robbyrussell"
+
+ZSH 插件安装
+------------
+
+oh-my-zsh 还支持各种插件，存放在 ~/.oh-my-zsh/plugins
+目录下。这里推荐几款：
+
+-  autojump：快速切换目录插件
+
+.. code:: shell
+
+    # 安装
+    apt install autojump
+
+    # 使用
+    j Document/
+
+-  zsh-autosuggestions：命令行命令键入时的历史命令建议插件
+
+.. code:: shell
+
+    # 安装
+    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+
+-  zsh-syntax-highlighting：命令行语法高亮插件
+
+.. code:: shell
+
+    # 安装
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+
+    插件安装好后需要在 ~/.zshrc 文件里配置后方可使用，配置如下：
+    # 打开 ~/.zshrc 文件，找到如下这行配置代码，在后面追加插件名
+    plugins=(其他插件名 autojump zsh-autosuggestions zsh-syntax-highlighting)
+
 xshell上传下载文件
 ==================
 
