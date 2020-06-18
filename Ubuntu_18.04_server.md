@@ -2268,3 +2268,50 @@ slmgr.vbs -dlv
 
 
 
+# Ubuntu 安装Docker
+
+1. 安装Docker
+```shell
+wget -qO- https://get.docker.com/ | sh
+docker --version
+```
+
+2. [Docker 加速器](https://www.daocloud.io/mirror#accelerator-doc)
+
+```shell
+curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s http://4031ebb7.m.daocloud.io
+```
+
+3. 安装 `docker-compose`
+
+```shell
+sudo pip install -U docker-compose
+docker-compose --version
+```
+
+## 搭建Sentry
+
+```shell
+# 下载Sentry
+git clone https://github.com/getsentry/onpremise.git
+# 创建目录
+mkdir -p data/{sentry,postgres} 
+# 获取项目的 key
+docker-compose run --rm web config generate-secret-key
+# 复制获取到的 key 字符串
+vim docker-compose.yml
+SENTRY_SECRET_KEY
+# 创建项目的 superuser
+docker-compose run --rm web upgrade
+# 开启 sentry 服务
+docker-compose up -d 
+```
+
+
+
+
+
+
+
+
+
