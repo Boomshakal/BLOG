@@ -331,7 +331,7 @@ class BookFilterView(APIView):
 - 等待用户请求
 - 接收到用户请求，根据url找到视图函数
 - 执行视图函数的dispatch方法(因为视图函数的返回值是return self.dispatch())
-- dispatch分发请i去，茶轴打哦试图类的五个方法中的其中一个
+- dispatch分发请求，茶轴打哦试图类的五个方法中的其中一个
 - 开始执行比如post请求，返回self.create()，视图类本身没有，则会去父类中查找
 - 最后在CreateModelMixin中找到
 - 执行create()方法，获取qureyset和serializer_class
@@ -421,6 +421,7 @@ for method, action in actions.items():
         ModelViewSet-->UpdatelMixin
         ModelViewSet-->DestroyModelMixin
         ModelViewSet-->ListModelMixin
+        ModelViewSet-->GenericViewSet
         ReadOnlyModelViewSet-->ListModelMixin
         ReadOnlyModelViewSet-->GenericViewSet
         ReadOnlyModelViewSet-->RetrieveModelMixin
@@ -429,6 +430,33 @@ for method, action in actions.items():
         ViewSet-->APIView
         ViewSet-->ViewSetMixin
  ```
+
+```mermaid
+graph TD
+		CreateAPIView-->CreateModelMixin
+        CreateAPIView-->GenericAPIView
+        ListAPIView-->ListModelMixin
+        ListAPIView-->GenericAPIView
+        RetrieveAPIView-->RetrieveModelMixin
+        RetrieveAPIView-->GenericAPIView
+        DestroyAPIView-->DestroyModelMixin
+        DestroyAPIView-->GenericAPIView
+        UpdateAPIView-->UpdateModelMixin
+        UpdateAPIView-->GenericAPIView
+        ListCreateAPIView-->ListModelMixin
+        ListCreateAPIView-->CreateModelMixin
+        ListCreateAPIView-->GenericAPIView
+        RetrieveUpdateAPIView-->RetrieveModelMixin
+        RetrieveUpdateAPIView-->UpdateModelMixin
+        RetrieveUpdateAPIView-->GenericAPIView
+        RetrieveDestroyAPIView-->RetrieveModelMixin
+        RetrieveDestroyAPIView-->DestroyModelMixin
+        RetrieveDestroyAPIView-->GenericAPIView
+        RetrieveUpdateDestroyAPIView-->RetrieveModelMixin
+        RetrieveUpdateDestroyAPIView-->UpdateModelMixin
+        RetrieveUpdateDestroyAPIView-->DestroyModelMixin
+        RetrieveUpdateDestroyAPIView-->GenericAPIView
+```
 
 ## 认证组件
 

@@ -453,6 +453,14 @@ index-url = https://mirrors.aliyun.com/pypi/simple
 
 
 
+# Snap包安装
+
+```shell
+sudo snap install picgo.snap --dangerous
+```
+
+
+
 # 命令后台运行
 
 ### 后台运行
