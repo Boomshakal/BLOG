@@ -213,6 +213,8 @@ class APIView(View):
 </table>
 
 
+详情参考 ：https://www.cnblogs.com/xiao-xue-di/p/9959734.html
+
 
 1. Django原生serializers  django.core.serializers
 ```python
