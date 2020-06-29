@@ -2281,19 +2281,21 @@ slmgr.vbs -dlv
 1. 安装Docker
 ```shell
 wget -qO- https://get.docker.com/ | sh
+# 国内镜像
+curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
 docker --version
 ```
 
 2. [Docker 加速器](https://www.daocloud.io/mirror#accelerator-doc)
 
 ```shell
-curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s http://4031ebb7.m.daocloud.io
+curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s https://b33dfgq9.mirror.aliyuncs.com
 ```
 
 3. 安装 `docker-compose`
 
 ```shell
-sudo pip install -U docker-compose
+sudo apt install docker-compose
 docker-compose --version
 ```
 
@@ -2315,11 +2317,35 @@ docker-compose run --rm web upgrade
 docker-compose up -d 
 ```
 
+## 搭建elasticsearch
 
+```shell
+docker pull elasticsearch:版本号
+# 不选择版本就是最新的
 
+docker run --name=test_es -d -p 9200:9200 -p 9300:9300 docker.io/elasticsearch
 
+# 查看容器运行状态
+docker ps 
+docker ps -a # 查看所有的容器
+# 未启动查看 logs
+docker logs test_es
 
+## 发现虚拟机内存太小了
+# OpenJDK 64-Bit Server VM warning: INFO: os::commit_memory(0x0000000094cc0000, 1798569984, 0) failed; 
+# error='Cannot allocate memory' (errno=12)
+#
+# There is insufficient memory for the Java Runtime Environment to continue.
+# Native memory allocation (mmap) failed to map 1798569984 bytes for committing reserved memory.
+# An error report file with more information is saved as:
+# /tmp/hs_err_pid1.log
 
+# 启动test_es 容器
+docker start test_es
+
+# 删除容器
+docker rm test_es
+```
 
 
 

@@ -105,6 +105,7 @@
 <li class="toctree-l1"><a class="reference internal" href="#gnome">安装GNOME桌面</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#python">安装Python虚拟环境</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#pip">pip 国内源</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#snap">Snap包安装</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#id6">命令后台运行</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#id7">查看端口</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#id8">防火墙</a></li>
@@ -168,6 +169,11 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#ubuntukms">Ubuntu搭建KMS服务器</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#ubuntu-docker">Ubuntu 安装Docker</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#sentry">搭建Sentry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#elasticsearch">搭建elasticsearch</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="django_restframework.html">django restframework</a></li>
 </ul>
 
@@ -595,6 +601,12 @@ index-url <span class="o">=</span> https://mirrors.aliyun.com/pypi/simple
 山东理工大学：<a class="reference external" href="http://pypi.sdutlinux.org/">http://pypi.sdutlinux.org/</a>
 豆瓣：<a class="reference external" href="http://pypi.douban.com/simple/">http://pypi.douban.com/simple/</a></p>
 <p>注意：不管你用的是pip3还是pip，方法都是一样的，都是创建pip文件夹。</p>
+</div>
+<div class="section" id="snap">
+<h1>Snap包安装<a class="headerlink" href="#snap" title="永久链接至标题">¶</a></h1>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo snap install picgo.snap --dangerous
+</pre></div>
+</div>
 </div>
 <div class="section" id="id6">
 <h1>命令后台运行<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h1>
@@ -2367,6 +2379,78 @@ slmgr /ato
 <span class="c1"># 验证激活</span>
 slmgr.vbs -dlv
 </pre></div>
+</div>
+</div>
+<div class="section" id="ubuntu-docker">
+<h1>Ubuntu 安装Docker<a class="headerlink" href="#ubuntu-docker" title="永久链接至标题">¶</a></h1>
+<ol class="arabic">
+<li><p>安装Docker</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>wget -qO- https://get.docker.com/ <span class="p">|</span> sh
+<span class="c1"># 国内镜像</span>
+curl -fsSL https://get.docker.com <span class="p">|</span> bash -s docker --mirror Aliyun
+docker --version
+</pre></div>
+</div>
+</li>
+<li><p><a class="reference external" href="https://www.daocloud.io/mirror#accelerator-doc">Docker 加速器</a></p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>curl -sSL https://get.daocloud.io/daotools/set_mirror.sh <span class="p">|</span> sh -s https://b33dfgq9.mirror.aliyuncs.com
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>安装 <code class="docutils literal notranslate"><span class="pre">docker-compose</span></code></p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo apt install docker-compose
+docker-compose --version
+</pre></div>
+</div>
+<div class="section" id="sentry">
+<h2>搭建Sentry<a class="headerlink" href="#sentry" title="永久链接至标题">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="c1"># 下载Sentry</span>
+git clone https://github.com/getsentry/onpremise.git
+<span class="c1"># 创建目录</span>
+mkdir -p data/<span class="o">{</span>sentry,postgres<span class="o">}</span>
+<span class="c1"># 获取项目的 key</span>
+docker-compose run --rm web config generate-secret-key
+<span class="c1"># 复制获取到的 key 字符串</span>
+vim docker-compose.yml
+SENTRY_SECRET_KEY
+<span class="c1"># 创建项目的 superuser</span>
+docker-compose run --rm web upgrade
+<span class="c1"># 开启 sentry 服务</span>
+docker-compose up -d
+</pre></div>
+</div>
+</div>
+<div class="section" id="elasticsearch">
+<h2>搭建elasticsearch<a class="headerlink" href="#elasticsearch" title="永久链接至标题">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>docker pull elasticsearch:版本号
+<span class="c1"># 不选择版本就是最新的</span>
+
+docker run --name<span class="o">=</span>test_es -d -p <span class="m">9200</span>:9200 -p <span class="m">9300</span>:9300 docker.io/elasticsearch
+
+<span class="c1"># 查看容器运行状态</span>
+docker ps
+docker ps -a <span class="c1"># 查看所有的容器</span>
+<span class="c1"># 未启动查看 logs</span>
+docker logs test_es
+
+<span class="c1">## 发现虚拟机内存太小了</span>
+<span class="c1"># OpenJDK 64-Bit Server VM warning: INFO: os::commit_memory(0x0000000094cc0000, 1798569984, 0) failed;</span>
+<span class="c1"># error=&#39;Cannot allocate memory&#39; (errno=12)</span>
+<span class="c1">#</span>
+<span class="c1"># There is insufficient memory for the Java Runtime Environment to continue.</span>
+<span class="c1"># Native memory allocation (mmap) failed to map 1798569984 bytes for committing reserved memory.</span>
+<span class="c1"># An error report file with more information is saved as:</span>
+<span class="c1"># /tmp/hs_err_pid1.log</span>
+
+<span class="c1"># 启动test_es 容器</span>
+docker start test_es
+
+<span class="c1"># 删除容器</span>
+docker rm test_es
+</pre></div>
+</div>
 </div>
 </div>
 
