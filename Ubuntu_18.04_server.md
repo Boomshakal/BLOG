@@ -2300,6 +2300,198 @@ sudo apt install docker-compose
 docker-compose --version
 ```
 
+4. [Docker图形化工具](https://www.cnblogs.com/reasonzzy/p/11377324.html)
+
+5. [相关命令](https://www.jianshu.com/p/ca1623ac7723)
+
+```shell
+# 进入容器
+docker exec -it redis-test /bin/bash
+```
+
+6. docker常用命令
+   1. 镜像相关
+
+- docker search java：在Docker Hub（或阿里镜像）仓库中搜索关键字（如java）的镜像
+
+- docker pull java:8：从仓库中下载镜像，若要指定版本，则要在冒号后指定
+
+- docker images：列出已经下载的镜像
+
+- docker rmi java：删除本地镜像
+
+- docker build：构建镜像
+
+  2. 容器相关
+
+- docker run -d -p 91:80 nginx ：在后台运行nginx，若没有镜像则先下载，并将容器的80端口映射为宿主机的91端口。
+  - -d：后台运行
+  - -P：随机端口映射
+  - -p：指定端口映射
+  - -net：网络模式
+
+- docker ps：列出运行中的容器
+
+- docker ps -a ：列出所有的容器
+
+- docker stop 容器id：停止容器
+
+- docker kill 容器id：强制停止容器
+
+- docker start 容器id：启动已停止的容器
+
+- docker inspect 容器id：查看容器的所有信息
+
+- docker container logs 容器id：查看容器日志
+
+- docker top 容器id：查看容器里的进程
+
+- docker exec -it 容器id /bin/bash：进入容器
+
+- exit：退出容器
+
+- docker rm 容器id：删除已停止的容器
+
+- docker rm -f 容器id：删除正在运行的容器
+
+
+
+
+## 搭建Nginx
+
+```shell
+docker pull nginx
+
+mkdir -p /data/nginx/{conf,conf.d,html,logs}
+
+docker run --name mynginx -d -p 82:80  -v /data/nginx/conf/nginx.conf:/etc/nginx/nginx.conf  -v /data/nginx/logs:/var/log/nginx -d nginx
+```
+
+### nginx.conf
+
+```shell
+
+#user  nobody;
+worker_processes  1;
+
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        logs/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log  logs/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    server {
+        listen       80;
+        server_name  localhost;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+
+        #error_page  404              /404.html;
+
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    # HTTPS server
+    #
+    #server {
+    #    listen       443 ssl;
+    #    server_name  localhost;
+
+    #    ssl_certificate      cert.pem;
+    #    ssl_certificate_key  cert.key;
+
+    #    ssl_session_cache    shared:SSL:1m;
+    #    ssl_session_timeout  5m;
+
+    #    ssl_ciphers  HIGH:!aNULL:!MD5;
+    #    ssl_prefer_server_ciphers  on;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+}
+```
+
+
+
+
+
 ## 搭建Sentry
 
 ```shell
