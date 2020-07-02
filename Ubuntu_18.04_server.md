@@ -1548,7 +1548,7 @@ cd sbin
 ```shell
 netstat -tunlp |grep 80
 curl -I 127.0.0.1
-#如果访问不了，检查selinux，iptables防火墙
+# 如果访问不了，检查selinux，iptables防火墙
 getenforce
 Disabled
 ```
@@ -2364,131 +2364,70 @@ docker pull nginx
 
 mkdir -p /data/nginx/{conf,conf.d,html,logs}
 
-docker run --name mynginx -d -p 82:80  -v /data/nginx/conf/nginx.conf:/etc/nginx/nginx.conf  -v /data/nginx/logs:/var/log/nginx -d nginx
+docker run --name mynginx -d -p 80:80  \
+-v /data/nginx/conf/nginx.conf:/etc/nginx/nginx.conf  \
+-v /data/nginx/logs:/var/log/nginx \
+-d nginx
 ```
 
-### nginx.conf
+[nginx.conf](https://trac.nginx.org/nginx/export/HEAD/nginx/conf/nginx.conf)官方下载
+
+
+
+
+## 搭建Mysql
 
 ```shell
+docker pull mysql
+docker run -p 3306:3306 --name mysql -e MYSQL_ROOT_PASSWORD=root -d mysql
 
-#user  nobody;
-worker_processes  1;
-
-#error_log  logs/error.log;
-#error_log  logs/error.log  notice;
-#error_log  logs/error.log  info;
-
-#pid        logs/nginx.pid;
-
-
-events {
-    worker_connections  1024;
-}
-
-
-http {
-    include       mime.types;
-    default_type  application/octet-stream;
-
-    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-    #                  '$status $body_bytes_sent "$http_referer" '
-    #                  '"$http_user_agent" "$http_x_forwarded_for"';
-
-    #access_log  logs/access.log  main;
-
-    sendfile        on;
-    #tcp_nopush     on;
-
-    #keepalive_timeout  0;
-    keepalive_timeout  65;
-
-    #gzip  on;
-
-    server {
-        listen       80;
-        server_name  localhost;
-
-        #charset koi8-r;
-
-        #access_log  logs/host.access.log  main;
-
-        location / {
-            root   html;
-            index  index.html index.htm;
-        }
-
-        #error_page  404              /404.html;
-
-        # redirect server error pages to the static page /50x.html
-        #
-        error_page   500 502 503 504  /50x.html;
-        location = /50x.html {
-            root   html;
-        }
-
-        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
-        #
-        #location ~ \.php$ {
-        #    proxy_pass   http://127.0.0.1;
-        #}
-
-        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
-        #
-        #location ~ \.php$ {
-        #    root           html;
-        #    fastcgi_pass   127.0.0.1:9000;
-        #    fastcgi_index  index.php;
-        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
-        #    include        fastcgi_params;
-        #}
-
-        # deny access to .htaccess files, if Apache's document root
-        # concurs with nginx's one
-        #
-        #location ~ /\.ht {
-        #    deny  all;
-        #}
-    }
-
-    # another virtual host using mix of IP-, name-, and port-based configuration
-    #
-    #server {
-    #    listen       8000;
-    #    listen       somename:8080;
-    #    server_name  somename  alias  another.alias;
-
-    #    location / {
-    #        root   html;
-    #        index  index.html index.htm;
-    #    }
-    #}
-
-
-    # HTTPS server
-    #
-    #server {
-    #    listen       443 ssl;
-    #    server_name  localhost;
-
-    #    ssl_certificate      cert.pem;
-    #    ssl_certificate_key  cert.key;
-
-    #    ssl_session_cache    shared:SSL:1m;
-    #    ssl_session_timeout  5m;
-
-    #    ssl_ciphers  HIGH:!aNULL:!MD5;
-    #    ssl_prefer_server_ciphers  on;
-
-    #    location / {
-    #        root   html;
-    #        index  index.html index.htm;
-    #    }
-    #}
-
-}
+# 建立目录映射
+docker run -p 3306:3306 --name mysql \
+-v /usr/local/docker/mysql/conf:/etc/mysql \
+-v /usr/local/docker/mysql/logs:/var/log/mysql \
+-v /usr/local/docker/mysql/data:/var/lib/mysql \
+-e MYSQL_ROOT_PASSWORD=root \
+-d mysql
 ```
 
+## 搭建Redis
 
+```shell
+# pull镜像
+docker pull redis
+
+# 在/usr/local目录下创建docker目录
+mkdir /usr/local/docker
+cd /usr/local/docker
+# 再在docker目录下创建redis目录
+mkdir redis&&cd redis
+# 创建配置文件，并将官网redis.conf文件配置复制下来进行修改
+touch redis.conf
+# 创建数据存储目录data
+mkidr data
+```
+
+[redis.conf](http://download.redis.io/redis-stable/redis.conf)官网下载地址
+
+```shell
+修改启动默认配置(从上至下依次)：
+
+bind 127.0.0.1 #注释掉这部分，这是限制redis只能本地访问
+protected-mode no #默认yes，开启保护模式，限制为本地访问
+daemonize no#默认no，改为yes意为以守护进程方式启动，可后台运行，除非kill进程，改为yes会使配置文件方式启动redis失败
+databases 16 #数据库个数（可选），我修改了这个只是查看是否生效。。
+dir  ./ #输入本地redis数据库存放文件夹（可选）
+appendonly yes #redis持久化（可选）
+requirepass  密码 #配置redis访问密码
+```
+
+```shell
+# 创建并启动redis容器
+docker run -p 6379:6379 --name redis \
+-v /usr/local/docker/redis/redis.conf:/etc/redis/redis.conf \
+-v /usr/local/docker/redis/data:/data \
+-d redis redis-server /etc/redis/redis.conf --appendonly yes
+```
 
 
 
@@ -2539,6 +2478,8 @@ docker start test_es
 # 删除容器
 docker rm test_es
 ```
+
+
 
 
 
