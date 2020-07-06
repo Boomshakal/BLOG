@@ -2322,6 +2322,31 @@ docker exec -it redis-test /bin/bash
 
 - docker build：构建镜像
 
+  ```shell
+  # 基于的基础镜像
+  FROM python:3.6.9
+  
+  # 维护者信息
+  
+  MAINTAINER LHM  lhm@ikahe.com
+  
+  # 代码添加到code文件夹
+  
+  ADD ./docker_test /code
+  
+  # 设置code文件夹是工作目录
+  
+  WORKDIR /code
+  
+  # 安装支持
+  
+  RUN pip install -r requirements.txt
+  
+  CMD ["python", "/code/server.py"]
+  ```
+
+  
+
   2. 容器相关
 
 - docker run -d -p 91:80 nginx ：在后台运行nginx，若没有镜像则先下载，并将容器的80端口映射为宿主机的91端口。
