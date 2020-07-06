@@ -2379,6 +2379,15 @@ docker exec -it redis-test /bin/bash
 
 - docker rm -f 容器id：删除正在运行的容器
 
+  ```shell
+  # 导出镜像
+  docker save -o /home/user/images/ubuntu_14.04.tar ubuntu:14.04
+  # 导入镜像
+  docker load --input ubuntu_14.04.tar
+  ```
+
+  
+
 
 
 
