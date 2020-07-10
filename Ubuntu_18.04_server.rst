@@ -1,5 +1,8 @@
-Ubuntu 18.04 server 修改 apt 软件源为阿里云的源
-===============================================
+Ubuntu 18.04 server
+===================
+
+修改 apt 软件源为阿里云的源
+===========================
 
 1. 复制源文件备份，以防万一
 
@@ -1510,7 +1513,7 @@ dfr)+mysql+redis+linu(centos7)+git+vue(前端代码服务器)
 
     netstat -tunlp |grep 80
     curl -I 127.0.0.1
-    #如果访问不了，检查selinux，iptables防火墙
+    # 如果访问不了，检查selinux，iptables防火墙
     getenforce
     Disabled
 
@@ -2264,6 +2267,170 @@ Ubuntu 安装Docker
 
     sudo apt install docker-compose
     docker-compose --version
+
+4. `Docker图形化工具 <https://www.cnblogs.com/reasonzzy/p/11377324.html>`__
+
+5. `相关命令 <https://www.jianshu.com/p/ca1623ac7723>`__
+
+.. code:: shell
+
+    # 进入容器
+    docker exec -it redis-test /bin/bash
+
+6. docker常用命令
+7. 镜像相关
+
+-  docker search java：在Docker
+   Hub（或阿里镜像）仓库中搜索关键字（如java）的镜像
+
+-  docker pull java:8：从仓库中下载镜像，若要指定版本，则要在冒号后指定
+
+-  docker images：列出已经下载的镜像
+
+-  docker rmi java：删除本地镜像
+
+-  docker build：构建镜像
+
+\`\`\`shell # 基于的基础镜像 FROM python:3.6.9
+
+# 维护者信息
+
+MAINTAINER LHM  lhm@ikahe.com
+
+# 代码添加到code文件夹
+
+ADD ./docker\_test /code
+
+# 设置code文件夹是工作目录
+
+WORKDIR /code
+
+# 安装支持
+
+RUN pip install -r requirements.txt
+
+CMD ["python", "/code/server.py"] \`\`\`
+
+2. 容器相关
+
+-  docker run -d -p 91:80 nginx
+   ：在后台运行nginx，若没有镜像则先下载，并将容器的80端口映射为宿主机的91端口。
+-  -d：后台运行
+-  -P：随机端口映射
+-  -p：指定端口映射
+-  -net：网络模式
+
+-  docker ps：列出运行中的容器
+
+-  docker ps -a ：列出所有的容器
+
+-  docker stop 容器id：停止容器
+
+-  docker kill 容器id：强制停止容器
+
+-  docker start 容器id：启动已停止的容器
+
+-  docker inspect 容器id：查看容器的所有信息
+
+-  docker container logs 容器id：查看容器日志
+
+-  docker top 容器id：查看容器里的进程
+
+-  docker exec -it 容器id /bin/bash：进入容器
+
+-  exit：退出容器
+
+-  docker rm 容器id：删除已停止的容器
+
+-  docker rm -f 容器id：删除正在运行的容器
+
+``shell   # 导出镜像   docker save -o /home/user/images/ubuntu_14.04.tar ubuntu:14.04   # 导入镜像   docker load --input ubuntu_14.04.tar``
+
+搭建Nginx
+---------
+
+.. code:: shell
+
+    docker pull nginx
+
+    mkdir -p /data/nginx/{conf,conf.d,html,logs}
+
+    docker run --name mynginx -d -p 80:80  \
+    -v /data/nginx/conf/nginx.conf:/etc/nginx/nginx.conf  \
+    -v /data/nginx/logs:/var/log/nginx \
+    -d nginx
+
+`nginx.conf <https://trac.nginx.org/nginx/export/HEAD/nginx/conf/nginx.conf>`__\ 官方下载
+
+搭建Mysql
+---------
+
+.. code:: shell
+
+    docker pull mysql
+    docker run -p 3306:3306 --name mysql -e MYSQL_ROOT_PASSWORD=root -d mysql
+
+    # 建立目录映射
+    docker run -p 3306:3306 --name mysql \
+    -v /usr/local/docker/mysql/conf:/etc/mysql \
+    -v /usr/local/docker/mysql/logs:/var/log/mysql \
+    -v /usr/local/docker/mysql/data:/var/lib/mysql \
+    -e MYSQL_ROOT_PASSWORD=root \
+    -d mysql
+
+搭建Redis
+---------
+
+.. code:: shell
+
+    # pull镜像
+    docker pull redis
+
+    # 在/usr/local目录下创建docker目录
+    mkdir /usr/local/docker
+    cd /usr/local/docker
+    # 再在docker目录下创建redis目录
+    mkdir redis&&cd redis
+    # 创建配置文件，并将官网redis.conf文件配置复制下来进行修改
+    touch redis.conf
+    # 创建数据存储目录data
+    mkidr data
+
+`redis.conf <http://download.redis.io/redis-stable/redis.conf>`__\ 官网下载地址
+
+.. code:: shell
+
+    修改启动默认配置(从上至下依次)：
+
+    bind 127.0.0.1 #注释掉这部分，这是限制redis只能本地访问
+    protected-mode no #默认yes，开启保护模式，限制为本地访问
+    daemonize no#默认no，改为yes意为以守护进程方式启动，可后台运行，除非kill进程，改为yes会使配置文件方式启动redis失败
+    databases 16 #数据库个数（可选），我修改了这个只是查看是否生效。。
+    dir  ./ #输入本地redis数据库存放文件夹（可选）
+    appendonly yes #redis持久化（可选）
+    requirepass  密码 #配置redis访问密码
+
+.. code:: shell
+
+    # 创建并启动redis容器
+    docker run -p 6379:6379 --name redis \
+    -v /usr/local/docker/redis/redis.conf:/etc/redis/redis.conf \
+    -v /usr/local/docker/redis/data:/data \
+    -d redis redis-server /etc/redis/redis.conf --appendonly yes
+
+搭建MongoDB
+-----------
+
+.. code:: shell
+
+    docker pull mongo
+
+    # --auth 需要密码才能访问容器服务
+    docker run -itd --name mongo -p 27017:27017 mongo --auth
+
+    docker exec -it mongo mongo admin
+    >  db.createUser({ user:'admin',pwd:'123456',roles:[ { role:'userAdminAnyDatabase', db: 'admin'}]});
+    > db.auth('admin', '123456')
 
 搭建Sentry
 ----------
