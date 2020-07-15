@@ -2321,7 +2321,7 @@ docker exec -it redis-test /bin/bash
 
 - docker rmi java：删除本地镜像
 
-- docker build：构建镜像
+- docker build -t image_name:version Dockerfile_path：构建镜像
 
   ```shell
   # 基于的基础镜像
