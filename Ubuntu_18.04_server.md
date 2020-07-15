@@ -2302,7 +2302,14 @@ docker-compose --version
 
 4. [Docker图形化工具](https://www.cnblogs.com/reasonzzy/p/11377324.html)
 
-5. [相关命令](https://www.jianshu.com/p/ca1623ac7723)
+```shell
+docker pull portainer/portainer && \
+docker run -d --name portainerUI -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer
+```
+
+
+
+4. [相关命令](https://www.jianshu.com/p/ca1623ac7723)
 
 ```shell
 # 进入容器
