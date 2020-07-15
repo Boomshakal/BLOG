@@ -2471,6 +2471,23 @@ docker run -p 6379:6379 --name redis \
 
 
 
+## 搭建MongoDB
+
+```shell
+docker pull mongo
+
+# --auth 需要密码才能访问容器服务
+docker run -itd --name mongo -p 27017:27017 mongo --auth
+
+docker exec -it mongo mongo admin
+>  db.createUser({ user:'admin',pwd:'123456',roles:[ { role:'userAdminAnyDatabase', db: 'admin'}]});
+> db.auth('admin', '123456')
+```
+
+
+
+
+
 ## 搭建Sentry
 
 ```shell
@@ -2522,4 +2539,8 @@ docker rm test_es
 
 
 
+
+## 项目部署
+
+[http://www.jayden5.cn/2020/01/04/docker-%E4%BD%BF%E7%94%A8/](http://www.jayden5.cn/2020/01/04/docker-使用/)
 
