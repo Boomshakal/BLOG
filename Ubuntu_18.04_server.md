@@ -2284,6 +2284,7 @@ slmgr.vbs -dlv
 wget -qO- https://get.docker.com/ | sh
 # 国内镜像
 curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+# 查看dockers版本
 docker --version
 ```
 
@@ -2354,7 +2355,12 @@ docker exec -it redis-test /bin/bash
   - -P：随机端口映射
   - -p：指定端口映射
   - -net：网络模式
-
+- --restart=no - 容器退出时，不重启容器；
+  
+  ​    				    on-failure - 只有在非0状态退出时才从新启动容器；
+  
+  ​    				    always - 无论退出状态是如何，都重启容器；
+  
 - docker ps：列出运行中的容器
 
 - docker ps -a ：列出所有的容器
