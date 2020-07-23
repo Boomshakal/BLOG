@@ -71,6 +71,24 @@ sudo visudo
 
 
 
+# 修改系统主机名三种方法
+
+- 方法1:修改配置文件
+```shell
+sudo nano /etc/hosts
+```
+- 方法2：hostnamectl命令
+```shell
+sudo hostnamectl set-hostname <newhostname>
+```
+- 方法3：hostname命令进行临时更改
+```shell
+sudo hostname <new-hostname>
+```
+
+
+
+
 # 关闭UTC时间同步(双系统)
 
 ```shell
@@ -2550,4 +2568,12 @@ docker rm test_es
 ## 项目部署
 
 [http://www.jayden5.cn/2020/01/04/docker-%E4%BD%BF%E7%94%A8/](http://www.jayden5.cn/2020/01/04/docker-使用/)
+
+```shell
+docker run -it -p 8080:80 --name mysite3-nginx \
+ -v /home/li/mysite3/static:/usr/share/nginx/html/static \
+ -v /home/li/mysite3/media:/usr/share/nginx/html/media \
+ -v /home/li/mysite3/compose/nginx/log:/var/log/nginx \
+ -d mynginx:v1
+```
 
