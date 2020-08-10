@@ -88,6 +88,17 @@ sudo hostname <new-hostname>
 
 
 
+# RAID
+
+```shell
+# RAID5
+mdadm -Cv /dev/md0 -n 3 -l 5 -x 1 /dev/sdb /dev/sdc /dev/sdd /dev/sde
+```
+
+
+
+
+
 
 # 关闭UTC时间同步(双系统)
 
@@ -2304,6 +2315,8 @@ wget -qO- https://get.docker.com/ | sh
 curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
 # 查看dockers版本
 docker --version
+# 给普通用户添加权限
+sudo usermod -aG docker $USER
 ```
 
 2. [Docker 加速器](https://www.daocloud.io/mirror#accelerator-doc)
