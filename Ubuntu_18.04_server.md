@@ -88,12 +88,90 @@ sudo hostname <new-hostname>
 
 
 
-# RAID
+# RAID磁盘阵列
+
+1. 识别组件设备
 
 ```shell
-# RAID5
-mdadm -Cv /dev/md0 -n 3 -l 5 -x 1 /dev/sdb /dev/sdc /dev/sdd /dev/sde
+# 查看原始磁盘的标识符
+lsblk -o NAME,SIZE,FSTYPE,TYPE,MOUNTPOINT
 ```
+
+2. 创建数组
+
+```shell
+# RAID0
+sudo mdadm --create --verbose /dev/md0 --level=0 --raid-devices=2 /dev/sda /dev/sdb
+# 检查/proc/mdstat文件来确保成功创建RAID
+cat /proc/mdstat
+
+
+# RAID1
+sudo mdadm --create --verbose /dev/md0 --level=1 --raid-devices=2 /dev/sda /dev/sdb
+
+# RAID5
+sudo mdadm --create --verbose /dev/md0 --level=5 --raid-devices=3 /dev/sda /dev/sdb /dev/sdc
+
+# RAID6
+sudo mdadm --create --verbose /dev/md0 --level=6 --raid-devices=4 /dev/sda /dev/sdb /dev/sdc /dev/sdd
+
+# RAID10
+sudo mdadm --create --verbose /dev/md0 --level=10 --raid-devices=4 /dev/sda /dev/sdb /dev/sdc /dev/sdd
+```
+
+3. 创建和挂载文件系统
+
+```shell
+# 创建文件系统
+sudo mkfs.ext4 -F /dev/md0
+# 创建挂载点
+sudo mkdir -p /mnt/md0
+# 挂载文件系统
+sudo mount /dev/md0 /mnt/md0
+# 检查新空间是否可用
+df -h -x devtmpfs -x tmpfs
+```
+4. 保存数组布局
+
+```shell
+# 为了确保在引导时自动重新组装阵列，我们将不得不调整/etc/mdadm/mdadm.conf文件。您可以通过键入以下内容自动扫描活动数组并附加文件
+sudo mdadm --detail --scan | sudo tee -a /etc/mdadm/mdadm.conf
+# 之后，您可以更新initramfs或初始RAM文件系统，以便在早期启动过程中阵列可用
+sudo update-initramfs -u
+# 将新的文件系统挂载选项添加到/etc/fstab文件中以便在引导时自动挂载
+echo '/dev/md0 /mnt/md0 ext4 defaults,nofail,discard 0 0' | sudo tee -a /etc/fstab
+```
+
+5. 删除RAID
+
+```shell
+# 卸载数组
+sudo umount /dev/md0
+# 停止并删除数组
+sudo mdadm --stop /dev/md0
+
+# 清零以删除RAID元数据前,先检查/dev/sd* 名称有无变化
+lsblk -o NAME,SIZE,FSTYPE,TYPE,MOUNTPOINT
+
+# 清零以删除RAID元数据
+sudo mdadm --zero-superblock /dev/sdc
+sudo mdadm --zero-superblock /dev/sdd
+
+# 编辑/etc/fstab文件并注释掉或删除对数组的引用
+sudo nano /etc/fstab
+. . .
+# /dev/md0 /mnt/md0 ext4 defaults,nofail,discard 0 0
+
+# 注释掉或从/etc/mdadm/mdadm.conf文件中删除数组定义
+sudo nano /etc/mdadm/mdadm.conf
+. . .
+# ARRAY /dev/md0 metadata=1.2 name=mdadmwrite:0 UUID=7261fb9c:976d0d97:30bc63ce:85e76e91
+
+# initramfs再次更新
+sudo update-initramfs -u
+```
+
+
 
 
 
