@@ -2668,3 +2668,181 @@ docker run -it -p 8080:80 --name mysite3-nginx \
  -d mynginx:v1
 ```
 
+
+
+# K8S
+
+1. 系统检查
+
+```shell
+# 修改主机名称
+hostnamectl set-hostname k8s-master
+# 修改hosts文件
+echo "192.168.3.101 k8s-master" >> /etc/hosts
+# 查看ufw状态
+ufw status
+# 临时关闭swap
+swapoff -a
+```
+
+2. docker-ce
+
+```shell
+# 安装必要的一些系统工具
+apt-get -y install apt-transport-https ca-certificates curl software-properties-common
+# 安装GPG证书
+curl -fsSL http://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg | apt-key add -
+# 写入软件源信息
+add-apt-repository "deb [arch=amd64] http://mirrors.aliyun.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable"
+# 更新并安装 Docker-CE
+apt-get -y update
+apt-get -y install docker-ce
+# 配置docker-hub源
+curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s https://b33dfgq9.mirror.aliyuncs.com
+# 重启docker
+systemctl daemon-reload && systemctl restart docker
+```
+
+3. kubeadm
+
+```shell
+# 安装https
+apt-get update && apt-get install -y apt-transport-https
+# 添加密钥
+curl -fsSL https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | apt-key add -
+# 添加源
+add-apt-repository "deb [arch=amd64] https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main"
+# 更新源
+apt-get update
+# 查看1.15的最新版本
+apt-cache madison kubelet kubectl kubeadm |grep '1.15.4-00'
+# 安装指定的版本
+apt install -y kubelet=1.15.4-00 kubectl=1.15.4-00 kubeadm=1.15.4-00
+# 查看kubelet版本
+kubectl version --client=true -o yaml
+# 配置kubelet禁用swap
+echo 'KUBELET_EXTRA_ARGS="--fail-swap-on=false"' > /etc/default/kubelet
+# 重启kubelet
+systemctl daemon-reload && systemctl restart kubelet
+# 查看kubelet服务启动状态(因缺少缺少很多参数配置文件,需要等待kubeadm init 后生成)
+journalctl -u kubelet -f
+```
+
+4. 初始化k8s
+
+```shell
+kubeadm init \
+  --kubernetes-version=v1.15.12 \
+  --image-repository registry.aliyuncs.com/google_containers \
+  --pod-network-cidr=10.244.0.0/16 \
+  --ignore-preflight-errors=Swap
+```
+
+5. kubectl配置调用
+
+```shell
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+6. k8s网络
+
+https://github.com/kubernetes/dashboard#kubernetes-dashboard
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+kubectl get pods -A
+# 如果拉取不下来，自己pull就可以
+grep -i image kube-flannel.yml
+docker pull quay.io/coreos/flannel:v0.11.0-amd64
+```
+
+7. dashboard
+
+https://github.com/kubernetes/dashboard#kubernetes-dashboard
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
+
+kubectl get pods -A
+
+kubectl get namespaces
+```
+
+8. 解决kubernetes-dashboard本地打开的问题
+
+https://www.cnblogs.com/rainingnight/p/deploying-k8s-dashboard-ui.html
+
+```shell
+kubectl cluster-info
+# 访问地址//请注意namespace
+https://<master-ip>:<apiserver-port>/api/v1/namespaces/xxxxxxxx/services/https:kubernetes-dashboard:/proxy/
+```
+- 创建服务账号
+
+```shell
+#vim admin-user.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kube-system
+
+kubectl create -f admin-user.yaml
+```
+- 绑定角色
+
+```shell
+#vim admin-user-role-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kube-system
+  
+kubectl create -f  admin-user-role-binding.yaml
+```
+
+- 获取Token
+
+```shell
+kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
+```
+
+9. 制作证书
+
+k8s默认启用了RBAC，并为未认证用户赋予了一个默认的身份：anonymous
+
+```shell
+我们使用client-certificate-data和client-key-data生成一个p12文件，可使用下列命令：
+# 生成client-certificate-data
+grep 'client-certificate-data' ~/.kube/config | head -n 1 | awk '{print $2}' | base64 -d >> kubecfg.crt
+
+# 生成client-key-data
+grep 'client-key-data' ~/.kube/config | head -n 1 | awk '{print $2}' | base64 -d >> kubecfg.key
+
+# 生成p12
+openssl pkcs12 -export -clcerts -inkey kubecfg.key -in kubecfg.crt -out kubecfg.p12 -name "kubernetes-client"
+```
+
+10. 访问
+
+https://192.168.3.101:6443/api/v1/namespaces**/kubernetes-system/**services/https:kubernetes-dashboard:/proxy/  
+
+进去，输入token即可进入,注意：token的值一行，不要分行
+
+11. 单节点k8s,默认pod不被调度在master节点
+
+```shell
+kubectl taint nodes --all node-role.kubernetes.io/master-
+```
+
