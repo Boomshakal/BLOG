@@ -2728,6 +2728,8 @@ systemctl daemon-reload && systemctl restart kubelet
 journalctl -u kubelet -f
 ```
 
+至此，单个虚拟机配置完毕，接下来会clone一个虚拟机来配置集群环境
+
 4. 初始化k8s
 
 ```shell
@@ -2736,6 +2738,13 @@ kubeadm init \
   --image-repository registry.aliyuncs.com/google_containers \
   --pod-network-cidr=10.244.0.0/16 \
   --ignore-preflight-errors=Swap
+  
+# 加入nodes
+kubeadm join 192.168.1.107:6443 --token bvkgue.f5zpauffltb6zkzi \
+    --discovery-token-ca-cert-hash sha256:3113f037dce468decbf284d3ef7d19809513906ddaa79e6b4496f1d4a1a98c88
+
+# 如果token失效(24小时有效期)，重新生成token
+kubeadm token create
 ```
 
 5. kubectl配置调用
@@ -2746,7 +2755,7 @@ cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-6. k8s网络
+6. k8s网络flannel
 
 https://github.com/kubernetes/dashboard#kubernetes-dashboard
 
@@ -2764,10 +2773,20 @@ docker pull quay.io/coreos/flannel:v0.11.0-amd64
 https://github.com/kubernetes/dashboard#kubernetes-dashboard
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
+kubectl get nodes
+
+# 下载dashboard.yaml
+wget https://k8s-1252147235.cos.ap-chengdu.myqcloud.com/dashboard/dashboard.yaml
+# 拉取镜像
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kubernetes-dashboard-amd64
+# 创建服务
+kubectl apply -f dashboard.yaml
+# 官方推荐
+# kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
 
 kubectl get pods -A
-
+kubectl get pod -n kube-system
+kubectl get pod,svc -n kube-system
 kubectl get namespaces
 ```
 
@@ -2836,7 +2855,7 @@ openssl pkcs12 -export -clcerts -inkey kubecfg.key -in kubecfg.crt -out kubecfg.
 
 10. 访问
 
-https://192.168.3.101:6443/api/v1/namespaces**/kubernetes-system/**services/https:kubernetes-dashboard:/proxy/  
+https://<HOST_IP>:30001
 
 进去，输入token即可进入,注意：token的值一行，不要分行
 
@@ -2845,4 +2864,18 @@ https://192.168.3.101:6443/api/v1/namespaces**/kubernetes-system/**services/http
 ```shell
 kubectl taint nodes --all node-role.kubernetes.io/master-
 ```
+
+12. 集成Heapster-[InfluxDB](https://github.com/kubernetes-retired/heapster/blob/master/docs/influxdb.md)
+
+Heapster是容器集群监控和性能分析工具，天然的支持Kubernetes和CoreOS。
+
+```shell
+git clone https://github.com/kubernetes-retired/heapster.git
+kubectl create -f deploy/kube-config/influxdb/
+kubectl create -f deploy/kube-config/rbac/heapster-rbac.yaml
+
+kubectl get pods --namespace=kube-system
+```
+
+
 
