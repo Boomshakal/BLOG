@@ -186,6 +186,30 @@ timedatectl set-local-rtc 1 --adjust-system-clock
 
 
 
+# ubuntu修改时间为北京时间
+
+```shell
+# 查看当前时区
+date
+# 修改时区
+tzselect
+# 复制文件到/etc目录下
+cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+
+网上同步时间
+1. 安装ntpdate工具
+# sudo apt-get install ntpdate
+2. 设置系统时间与网络时间同步
+# ntpdate cn.pool.ntp.org
+3. 将系统时间写入硬件时间
+# hwclock --systohc
+```
+
+
+
+
+
 # 安装**安装 zsh 和 oh-my-zsh**
 
 ```shell
@@ -355,6 +379,26 @@ sz filepath #sz pro_cel.rar
 解压：lha -e FileName.lha
 
 压缩：lha -a FileName.lha FileName
+
+
+
+# 修改IP地址
+
+```shell
+vim /etc/netplan/00-installer-init.yaml
+
+network:
+    ethernets:
+        ens33:
+            addresses: [192.168.1.205/24]
+            gateway4: 192.168.1.1
+            dhcp4: yes
+    version: 2
+
+sudo netplan apply
+```
+
+
 
 
 
@@ -2678,7 +2722,7 @@ docker run -it -p 8080:80 --name mysite3-nginx \
 # 修改主机名称
 hostnamectl set-hostname k8s-master
 # 修改hosts文件
-echo "192.168.3.101 k8s-master" >> /etc/hosts
+echo "192.168.150.59 k8s-master" >> /etc/hosts
 # 查看ufw状态
 ufw status
 # 临时关闭swap
@@ -2736,12 +2780,14 @@ journalctl -u kubelet -f
 kubeadm init \
   --kubernetes-version=v1.15.12 \
   --image-repository registry.aliyuncs.com/google_containers \
-  --pod-network-cidr=10.244.0.0/16 \
+  --pod-network-cidr=192.168.150.0/23 \
   --ignore-preflight-errors=Swap
   
 # 加入nodes
-kubeadm join 192.168.1.107:6443 --token bvkgue.f5zpauffltb6zkzi \
-    --discovery-token-ca-cert-hash sha256:3113f037dce468decbf284d3ef7d19809513906ddaa79e6b4496f1d4a1a98c88
+kubeadm join 你的IP地址:6443 --token 你的TOKEN --discovery-token-ca-cert-hash sha256:你的CA证书哈希
+
+token. 通过命令Kubeadm token list找回
+ca-cert. 执行命令openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'找回
 
 # 如果token失效(24小时有效期)，重新生成token
 kubeadm token create
@@ -2765,7 +2811,7 @@ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documen
 kubectl get pods -A
 # 如果拉取不下来，自己pull就可以
 grep -i image kube-flannel.yml
-docker pull quay.io/coreos/flannel:v0.11.0-amd64
+docker pull quay.io/coreos/flannel:v0.12.0-amd64
 ```
 
 7. dashboard
@@ -2876,6 +2922,55 @@ kubectl create -f deploy/kube-config/rbac/heapster-rbac.yaml
 
 kubectl get pods --namespace=kube-system
 ```
+
+13. Deployment.yaml
+
+```shell
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspect-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inspect-server
+  template:
+    metadata:
+      labels:
+        app: inspect-server
+    spec:
+      containers:
+        - name: inspect-server
+          image: tcp_server:laster
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 9999
+```
+
+
+
+13. NodePort
+
+```shell
+# server.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: inspect-server
+spec:
+  ports:
+    - port: 9999
+      protocol: TCP
+      targetPort: 9999
+      nodePort: 30000
+  selector:
+    app: inspect-server
+  type: NodePort
+```
+
+
 
 
 
