@@ -86,6 +86,38 @@ sudo hostnamectl set-hostname <newhostname>
 sudo hostname <new-hostname>
 ```
 
+# 文件共享
+
+1. NFS
+
+```shell
+1. 安装nfs服务端
+$ sudo apt install nfs-kernel-server -y
+2. 创建目录
+$ sudo mkdir -p /mnt/sharedfolder
+3. 使任何客户端均可访问
+$ sudo chown nobody:nogroup /mnt/sharedfolder　　
+$ sudo chmod 755 /mnt/sharedfolder
+4. 配置/etc/exports文件, 使任何ip均可访问(加入以下语句)
+/mnt/sharedfolder *(rw,sync,no_subtree_check)
+5. 检查nfs服务的目录
+$ sudo exportfs -ra (重新加载配置)
+$ sudo showmount -e (查看共享的目录和允许访问的ip段)
+6. 重启nfs服务使以上配置生效
+$ sudo systemctl restart nfs-kernel-server
+7. 测试nfs服务是否成功启动
+　　7.1 安装nfs 客户端
+　　　　$ sudo apt-get install nfs-common
+　　7.2 创建挂载目录
+　　　　$ sudo mkdir /mnt/sharedfolder_for_client
+   7.3 查看nfs服务的状态是否为active状态:active(exited)或active(runing)
+       $ systemctl status nfs-kernel-server
+　　7.4 在主机上的Linux中测试是否正常
+　　　　$ sudo mount localhost:/mnt/sharedfolder /mnt/sharedfolder_for_client (挂载成功，说明nfs服务正常)
+```
+
+
+
 
 
 # RAID磁盘阵列
@@ -2969,6 +3001,16 @@ spec:
     app: inspect-server
   type: NodePort
 ```
+
+14. 直接删除pvc/pv持久化
+
+```shell
+kubectl patch pvc data-mysql-0 -p '{"metadata":{"finalizers": null}}' -n mt-math
+
+kubectl patch pv pv-nfs-mysql01 -p '{"metadata":{"finalizers":null}}'
+```
+
+
 
 
 
