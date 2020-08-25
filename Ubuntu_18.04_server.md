@@ -2775,9 +2775,18 @@ apt-get -y update
 apt-get -y install docker-ce
 # 配置docker-hub源
 curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s https://b33dfgq9.mirror.aliyuncs.com
+# 修改进程隔离工具
+# docker默认cgroupfs  k8s使用systemd
+vim /etc/docker/daemon.json
+{
+...
+	"exec-opts": [ "native.cgroupdriver=systemd" ]
+}
 # 重启docker
 systemctl daemon-reload && systemctl restart docker
 ```
+
+
 
 3. kubeadm
 
@@ -2812,7 +2821,7 @@ journalctl -u kubelet -f
 kubeadm init \
   --kubernetes-version=v1.15.12 \
   --image-repository registry.aliyuncs.com/google_containers \
-  --pod-network-cidr=192.168.150.0/23 \
+  --pod-network-cidr=192.168.1.0/24 \
   --ignore-preflight-errors=Swap
   
 # 加入nodes
@@ -2822,7 +2831,7 @@ token. 通过命令Kubeadm token list找回
 ca-cert. 执行命令openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'找回
 
 # 如果token失效(24小时有效期)，重新生成token
-kubeadm token create
+kubeadm token create --print-join-command
 ```
 
 5. kubectl配置调用
@@ -2835,7 +2844,7 @@ chown $(id -u):$(id -g) $HOME/.kube/config
 
 6. k8s网络flannel
 
-https://github.com/kubernetes/dashboard#kubernetes-dashboard
+https://github.com/coreos/flannel
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
@@ -2856,7 +2865,7 @@ kubectl get nodes
 # 下载dashboard.yaml
 wget https://k8s-1252147235.cos.ap-chengdu.myqcloud.com/dashboard/dashboard.yaml
 # 拉取镜像
-docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kubernetes-dashboard-amd64
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kubernetes-dashboard-amd64:v1.10.1
 # 创建服务
 kubectl apply -f dashboard.yaml
 # 官方推荐
@@ -3009,6 +3018,14 @@ kubectl patch pvc data-mysql-0 -p '{"metadata":{"finalizers": null}}' -n mt-math
 
 kubectl patch pv pv-nfs-mysql01 -p '{"metadata":{"finalizers":null}}'
 ```
+
+15. 卸载k8s
+
+```shell
+kubeadm reset
+```
+
+
 
 
 
