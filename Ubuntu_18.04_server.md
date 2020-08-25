@@ -2802,7 +2802,7 @@ apt-get update
 # 查看1.15的最新版本
 apt-cache madison kubelet kubectl kubeadm |grep '1.15.4-00'
 # 安装指定的版本
-apt install -y kubelet=1.15.4-00 kubectl=1.15.4-00 kubeadm=1.15.4-00
+apt install -y kubelet=1.15.12-00 kubectl=1.15.12-00 kubeadm=1.15.12-00
 # 查看kubelet版本
 kubectl version --client=true -o yaml
 # 配置kubelet禁用swap
