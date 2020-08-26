@@ -2513,7 +2513,15 @@ docker exec -it redis-test /bin/bash
 
 - docker rmi java：删除本地镜像
 
-- docker build -t image_name:version Dockerfile_path：构建镜像
+- docker rmi -f \`docker images -q\`  删除所有镜像
+
+- docker tag 355627632b2 li/ubuntu:v1  设置标签
+
+- docker save -o /home/user/images/ubuntu_14.04.tar ubuntu:14.04 ：导出镜像
+
+- docker load --input ubuntu_14.04.tar ：导入镜像
+
+- docker build -t image_name:version Dockerfile_path ：构建镜像
 
   ```shell
   # 基于的基础镜像
@@ -2542,12 +2550,16 @@ docker exec -it redis-test /bin/bash
 
   2. 容器相关
 
-- docker run -d -p 91:80 nginx ：在后台运行nginx，若没有镜像则先下载，并将容器的80端口映射为宿主机的91端口。
-  - -d：后台运行
+- docker run  -d -p 91:80 nginx ：在后台运行nginx，若没有镜像则先下载，并将容器的80端口映射为宿主机的91端口。
+  
+  - -it: 交互式终端
+  - -d：守护式后台运行
   - -P：随机端口映射
   - -p：指定端口映射
   - -net：网络模式
-- --restart=no - 容器退出时，不重启容器；
+  - --name : 容器名称
+  - --rm : 交互式容器退出时自动删除容器
+  - --restart=no - 容器退出时，不重启容器；
   
   ​    				    on-failure - 只有在非0状态退出时才从新启动容器；
   
@@ -2571,18 +2583,13 @@ docker exec -it redis-test /bin/bash
 
 - docker exec -it 容器id /bin/bash：进入容器
 
+- docker attach 容器id ：进入容器
+
 - exit：退出容器
 
 - docker rm 容器id：删除已停止的容器
 
 - docker rm -f 容器id：删除正在运行的容器
-
-  ```shell
-  # 导出镜像
-  docker save -o /home/user/images/ubuntu_14.04.tar ubuntu:14.04
-  # 导入镜像
-  docker load --input ubuntu_14.04.tar
-  ```
 
   
 
