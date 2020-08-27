@@ -2553,7 +2553,7 @@ docker exec -it redis-test /bin/bash
 - docker run  -d -p 91:80 nginx ：在后台运行nginx，若没有镜像则先下载，并将容器的80端口映射为宿主机的91端口。
   
   - -it: 交互式终端
-  - -d：守护式后台运行
+  - -d：守护式daemon后台运行
   - -P：随机端口映射
   - -p：指定端口映射
   - -net：网络模式
@@ -2583,15 +2583,69 @@ docker exec -it redis-test /bin/bash
 
 - docker exec -it 容器id /bin/bash：进入容器
 
-- docker attach 容器id ：进入容器
+- docker attach 容器id ：进入容器(ctrl + P,Q) 切换后台
 
 - exit：退出容器
+
+- docker logs -tf --tail 10 容器id：查看容器日志
 
 - docker rm 容器id：删除已停止的容器
 
 - docker rm -f 容器id：删除正在运行的容器
 
-  
+- docker rm -f \`docker ps -a  -q\`  删除所有容器
+
+3. 容器的网络访问
+
+```shell
+# 指定映射(docker 会自动添加一条iptables规则来实现端口映射)
+    -p hostPort:containerPort
+    -p ip:hostPort:containerPort 
+    -p ip::containerPort(随机端口)
+    -p hostPort:containerPort/udp
+    -p 81:80 –p 443:443
+    
+# 随机映射
+    docker run -P 80（随机端口）
+    
+# 查看容器IP    
+docker inspect --format='{{.NetworkSettings.IPAddress}}' ID/NAMES
+```
+
+4. 容器持久化存储——volume卷管理
+
+```shell
+docker cp [OPTIONS] CONTAINER:SRC_PATH DEST_PATH|-
+docker cp [OPTIONS] SRC_PATH|- CONTAINER:DEST_PATH
+```
+
+```shell
+docker run -d -p 8083:80 --name "http8083" -v /opt/Volume/httpd:/usr/local/apache2/htdocs httpd
+docker run -d -p 8084:80 --name "http8084" -v /opt/Volume/httpd:/usr/local/apache2/htdocs httpd
+
+# 数据卷容器
+docker run -it  --name "httpd_volumes" \
+-v /opt/Volume/httpd_volume/conf:/usr/local/apache2/conf \
+-v /opt/Volume/httpd_volume/html:/usr/local/apache2/htdocs \
+centos:6.9 /bin/bash
+
+# 拷贝数据到数据卷中
+/opt/Volume/httpd_volume/html
+/opt/Volume/httpd_volume/conf
+docker  cp  DOCKERNAME:/opt/a.txt  /opt
+# 使用数据卷容器
+docker run -d  -p 8085:80 --volumes-from  httpd_volumes --name "http8085"  httpd
+docker run -d  -p 8086:80 --volumes-from  httpd_volumes --name "http8086"  httpd
+
+# 使用数据卷容器进行备份
+docker run --volumes-from  httpd_volumes --name "httpd_volumesbak" --rm  -v /backup:/backup:rw  centos:6.9   tar cvf /backup/conf.tar /usr/local/apache2/conf
+
+docker run --volumes-from  centosv1 --name "centosrestore" --rm  -v /backup:/backup:rw  centos   tar xvf  /backup/conf.tar
+```
+
+
+
+
 
 
 
