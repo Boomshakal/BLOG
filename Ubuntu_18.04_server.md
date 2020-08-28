@@ -88,7 +88,7 @@ sudo hostname <new-hostname>
 
 # 文件共享
 
-1. NFS
+## NFS
 
 ```shell
 1. 安装nfs服务端
@@ -116,9 +116,65 @@ $ sudo systemctl restart nfs-kernel-server
 　　　　$ sudo mount localhost:/mnt/sharedfolder /mnt/sharedfolder_for_client (挂载成功，说明nfs服务正常)
 ```
 
+## FTP
 
+```shell
+sudo apt-get install vsftpd
+sudo vim /etc/vsftpd.conf
 
+# 这个是设置是否允许匿名登录ftp服务器，不允许。
+anonymous_enable=NO
+# 是否允许本机用户登录
+local_enable=YES
+# 允许上传文件到ftp服务器
+write_enable=YES
 
+chroot_local_user=YES
+chroot_list_enable=YES
+# (default follows) 允许chroot_list文件中配置的用户登录此ftp服务器。
+chroot_list_file=/etc/vsftpd.chroot_list
+
+# 配置ftp服务器的上传下载文件所在的目录。
+local_root=/home/li/ftpfile
+
+# 给ftp服务器配置使用用户等信息
+vim /etc/vsftpd.chroot_list
+li
+
+mkdir -p /home/li/ftpfile
+# 重启ftp
+sudo /etc/init.d/vsftpd restart
+```
+
+## samb
+
+```shell
+sudo apt-get install samba
+sudo apt-get install smbclient
+samba -V
+
+sudo vim /etc/samba/smb.conf
+[share]
+   comment = share folder
+   browseable = yes
+   path = /home/li/share
+   create mask = 0777
+   directory mask = 0777
+   valid users = li
+   force user = nobody
+   force group = nogroup
+   public = yes
+   available = yes
+   writable=yes
+
+# 创建文件夹，并修改其权限
+mkdir share
+chmod 777 share
+# samba服务器添加用户
+sudo smbpasswd -a li
+# 重启samba服务器
+sudo /etc/init.d/smbd restart
+```
 
 # RAID磁盘阵列
 
@@ -2625,15 +2681,25 @@ docker run --volumes-from  centosv1 --name "centosrestore" --rm  -v /backup:/bac
 - 基于容器制作镜像
 
 ```shell
+mkdir -p /var/ftp/centos6.9
+mkdir -p /var/ftp/centos7.5
+
+mount -o loop /mnt/CentOS-6.9-x86_64-bin-DVD1.iso /var/ftp/centos6.9
+```
+
+```shell
 docker run -it --name "li_sshv1" centos:6.9 /bin/bash
 mv /etc/yum.repos.d/*.repo /tmp
- echo -e "[ftp]\nname=ftp\nbaseurl=ftp://10.0.0.110/pub/centos6\ngpgcheck=0">/etc/yum.repos.d/ftp.repo
+ echo -e "[ftp]\nname=ftp\nbaseurl=ftp://172.17.0.1/centos6\ngpgcheck=0">/etc/yum.repos.d/ftp.repo
 yum makecache fast && yum install openssh-server -y
 /etc/init.d/sshd start     ----->重要:ssh第一次启动时,需要生成秘钥,生成pam验证配置文件
 /etc/init.d/sshd stop
+
+docker commit li_sshv1 li/sshd:v1
+
 "hang" 运行sshd,并丢到后台
 /usr/sbin/sshd -D
-docker commit li_sshv1 li/sshd:v1
+docker run -d --name=sshd li/sshd /usr/sbin/sshd -D
 ```
 
 - 基于Dockerfile构建简易镜像
