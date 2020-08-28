@@ -2490,7 +2490,7 @@ docker-compose --version
 
 ```shell
 docker pull portainer/portainer && \
-docker run -d --name portainerUI -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer
+docker run -d --name portainerUI -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock --restart= always portainer/portainer
 ```
 
 
@@ -2523,33 +2523,10 @@ docker exec -it redis-test /bin/bash
 
 - docker build -t image_name:version Dockerfile_path ：构建镜像
 
-  ```shell
-  # 基于的基础镜像
-  FROM python:3.6.9
   
-  # 维护者信息
   
-  MAINTAINER LHM  lhm@ikahe.com
-  
-  # 代码添加到code文件夹
-  
-  ADD ./docker_test /code
-  
-  # 设置code文件夹是工作目录
-  
-  WORKDIR /code
-  
-  # 安装支持
-  
-  RUN pip install -r requirements.txt
-  
-  CMD ["python", "/code/server.py"]
-  ```
-
-  
-
   2. 容器相关
-
+  
 - docker run  -d -p 91:80 nginx ：在后台运行nginx，若没有镜像则先下载，并将容器的80端口映射为宿主机的91端口。
   
   - -it: 交互式终端
@@ -2643,7 +2620,54 @@ docker run --volumes-from  httpd_volumes --name "httpd_volumesbak" --rm  -v /bac
 docker run --volumes-from  centosv1 --name "centosrestore" --rm  -v /backup:/backup:rw  centos   tar xvf  /backup/conf.tar
 ```
 
+5. Docker镜像制作
 
+- 基于容器制作镜像
+
+```shell
+docker run -it --name "li_sshv1" centos:6.9 /bin/bash
+mv /etc/yum.repos.d/*.repo /tmp
+ echo -e "[ftp]\nname=ftp\nbaseurl=ftp://10.0.0.110/pub/centos6\ngpgcheck=0">/etc/yum.repos.d/ftp.repo
+yum makecache fast && yum install openssh-server -y
+/etc/init.d/sshd start     ----->重要:ssh第一次启动时,需要生成秘钥,生成pam验证配置文件
+/etc/init.d/sshd stop
+"hang" 运行sshd,并丢到后台
+/usr/sbin/sshd -D
+docker commit li_sshv1 li/sshd:v1
+```
+
+- 基于Dockerfile构建简易镜像
+
+```shell
+# 基于的基础镜像
+FROM python:3.6.9
+# 维护者信息
+MAINTAINER LHM  lhm@ikahe.com
+# 代码添加到code文件夹
+ADD ./docker_test /code
+# 设置code文件夹是工作目录
+WORKDIR /code
+# 安装支持
+RUN pip install -r requirements.txt
+CMD ["python", "/code/server.py"]
+```
+
+- 基于 docker-compose 构建
+
+https://github.com/Boomshakal/Django/tree/master/eshop_docker
+
+```shell
+# 如何在docker-compose.yml文件中command执行多条命令
+command: python3 manage.py migrate && python3 manage.py runserver 0.0.0.0:8000
+
+command:
+  - /bin/sh
+  - -c
+  - |
+    python3 manage.py migrate
+    # ...随意添加任意脚本...
+    python3 manage.py runserver 0.0.0.0:8000
+```
 
 
 
