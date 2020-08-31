@@ -2694,6 +2694,7 @@ mv /etc/yum.repos.d/*.repo /tmp
 yum makecache fast && yum install openssh-server -y
 /etc/init.d/sshd start     ----->重要:ssh第一次启动时,需要生成秘钥,生成pam验证配置文件
 /etc/init.d/sshd stop
+echo "123456" | grep root --stdin
 
 docker commit li_sshv1 li/sshd:v1
 
@@ -2703,6 +2704,49 @@ docker run -d --name=sshd li/sshd /usr/sbin/sshd -D
 ```
 
 - 基于Dockerfile构建简易镜像
+
+```shell
+FROM
+            Syntax:
+                        FROM <repo>:[:<tag>]
+                        or
+                        FROM  <repo>@<ImageID>
+              
+LABEL
+            Syntax：
+            			LABEL DEV="li <362169885@qq.com>"
+
+RUN
+            Syntax：
+                            mv /etc/yum.repos.d/*.repo /tmp && echo -e "[ftp]\nname=ftp\nbaseurl=ftp://172.17.0.1/centos6\ngpgcheck=0">/etc/yum.repos.d/ftp.repo && yum makecache fast && yum install openssh-server -y
+                            ["myusqld","--initialize-insecure","--user=mysql","--basedir=/usr/local/musql","--datadir=/data/mysql/data"]
+
+EXPOSE 
+            Syntax：
+                            EXPOSE 22
+CMD 
+            Syntax：
+                            ["/usr/sbin/sshd","-D"]
+COPY
+            Syntax：
+                            <src> ....<dest>
+ADD
+            Syntax：
+            				<src> ....<dest>
+            				url <dest>
+                            # 比COPY可以自动解压.tar* 的软件包到目标目录下
+ VOLUME 挂载卷                           
+ WORKDIR 工作路径
+ 
+ ENV 设定变量
+ ENV CODEDIR /var/www/html
+ ENV DATADIR /data/mysql/data
+ 
+ VOLUME ["${CODEDIR}","${DATADIR}"]
+ 
+ENTRYPOINT ["<executeable>","<param1>","<param2>",...]
+# 防止docker run command 替换CMD命令
+```
 
 ```shell
 # 基于的基础镜像
