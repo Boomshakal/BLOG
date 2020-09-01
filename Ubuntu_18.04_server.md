@@ -2518,7 +2518,7 @@ slmgr.vbs -dlv
 
 # Ubuntu 安装Docker
 
-1. 安装Docker
+## 1. 安装Docker
 ```shell
 wget -qO- https://get.docker.com/ | sh
 # 国内镜像
@@ -2529,20 +2529,20 @@ docker --version
 sudo usermod -aG docker $USER
 ```
 
-2. [Docker 加速器](https://www.daocloud.io/mirror#accelerator-doc)
+## 2. [Docker 加速器](https://www.daocloud.io/mirror#accelerator-doc)
 
 ```shell
 curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s https://b33dfgq9.mirror.aliyuncs.com
 ```
 
-3. 安装 `docker-compose`
+## 3. 安装 `docker-compose`
 
 ```shell
 sudo apt install docker-compose
 docker-compose --version
 ```
 
-4. [Docker图形化工具](https://www.cnblogs.com/reasonzzy/p/11377324.html)
+## 4. [Docker图形化工具](https://www.cnblogs.com/reasonzzy/p/11377324.html)
 
 ```shell
 docker pull portainer/portainer && \
@@ -2551,14 +2551,14 @@ docker run -d --name portainerUI -p 9000:9000 -v /var/run/docker.sock:/var/run/d
 
 
 
-4. [相关命令](https://www.jianshu.com/p/ca1623ac7723)
+## 5. [相关命令](https://www.jianshu.com/p/ca1623ac7723)
 
 ```shell
 # 进入容器
 docker exec -it redis-test /bin/bash
 ```
 
-6. docker常用命令
+## 6. docker常用命令
    1. 镜像相关
 
 - docker search java：在Docker Hub（或阿里镜像）仓库中搜索关键字（如java）的镜像
@@ -2579,10 +2579,8 @@ docker exec -it redis-test /bin/bash
 
 - docker build -t image_name:version Dockerfile_path ：构建镜像
 
-  
-  
-  2. 容器相关
-  
+2. 容器相关
+
 - docker run  -d -p 91:80 nginx ：在后台运行nginx，若没有镜像则先下载，并将容器的80端口映射为宿主机的91端口。
   
   - -it: 交互式终端
@@ -2879,7 +2877,26 @@ docker start test_es
 docker rm test_es
 ```
 
+## 搭建Plex Media Player
 
+[PLEX_CLAIM获取地址](https://www.plex.tv/claim)
+
+```shell
+docker run \
+-d \
+--name plex \
+-p 32400:32400/tcp \
+-e PUID=1000 \
+-e PGID=1000 \
+-e TZ="Asia/Shanghai" \
+-e PLEX_CLAIM="claim-gnc6azt4qdYs_pwNJBUy" \
+-v database:/config \
+-v transcode/temp:/transcode \
+-v /srv/dev-disk-by-label-RAID5/media:/data \
+--net=bridge \
+--device=/dev/dri:/dev/dri \
+plexinc/pms-docker
+```
 
 
 
