@@ -2692,7 +2692,7 @@ mv /etc/yum.repos.d/*.repo /tmp
 yum makecache fast && yum install openssh-server -y
 /etc/init.d/sshd start     ----->重要:ssh第一次启动时,需要生成秘钥,生成pam验证配置文件
 /etc/init.d/sshd stop
-echo "123456" | grep root --stdin
+echo "123456" | passwd --stdin root
 
 docker commit li_sshv1 li/sshd:v1
 
