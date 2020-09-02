@@ -2705,42 +2705,42 @@ docker run -d --name=sshd li/sshd /usr/sbin/sshd -D
 
 ```shell
 FROM
-            Syntax:
-                        FROM <repo>:[:<tag>]
-                        or
-                        FROM  <repo>@<ImageID>
+	Syntax:
+		FROM <repo>:[:<tag>]
+		or
+		FROM  <repo>@<ImageID>
               
 LABEL
-            Syntax：
-            			LABEL DEV="li <362169885@qq.com>"
+	Syntax：
+		LABEL DEV="li <362169885@qq.com>"
 
 RUN
-            Syntax：
-                            mv /etc/yum.repos.d/*.repo /tmp && echo -e "[ftp]\nname=ftp\nbaseurl=ftp://172.17.0.1/centos6\ngpgcheck=0">/etc/yum.repos.d/ftp.repo && yum makecache fast && yum install openssh-server -y
-                            ["myusqld","--initialize-insecure","--user=mysql","--basedir=/usr/local/musql","--datadir=/data/mysql/data"]
+	Syntax：
+		mv /etc/yum.repos.d/*.repo /tmp && echo -e "[ftp]\nname=ftp\nbaseurl=ftp://172.17.0.1/centos6\ngpgcheck=0">/etc/yum.repos.d/ftp.repo && yum makecache fast && yum install openssh-server -y
+		["myusqld","--initialize-insecure","--user=mysql","--basedir=/usr/local/musql","--datadir=/data/mysql/data"]
 
 EXPOSE 
-            Syntax：
-                            EXPOSE 22
+	Syntax：
+		EXPOSE 22
 CMD 
-            Syntax：
-                            ["/usr/sbin/sshd","-D"]
+	Syntax：
+		["/usr/sbin/sshd","-D"]
 COPY
-            Syntax：
-                            <src> ....<dest>
-ADD
-            Syntax：
-            				<src> ....<dest>
-            				url <dest>
-                            # 比COPY可以自动解压.tar* 的软件包到目标目录下
- VOLUME 挂载卷                           
- WORKDIR 工作路径
+	Syntax：
+		<src> ....<dest>
+ADD # 比COPY可以自动解压.tar* 的软件包到目标目录下
+	Syntax：
+		<src> ....<dest>
+		url <dest>
+
+VOLUME 挂载卷                           
+WORKDIR 工作路径
  
- ENV 设定变量
- ENV CODEDIR /var/www/html
- ENV DATADIR /data/mysql/data
+ENV 设定变量
+ENV CODEDIR /var/www/html
+ENV DATADIR /data/mysql/data
  
- VOLUME ["${CODEDIR}","${DATADIR}"]
+VOLUME ["${CODEDIR}","${DATADIR}"]
  
 ENTRYPOINT ["<executeable>","<param1>","<param2>",...]
 # 防止docker run command 替换CMD命令
@@ -2941,6 +2941,77 @@ docker run \
 --device=/dev/dri:/dev/dri \
 plexinc/pms-docker
 ```
+
+## 加密私有仓库registry
+
+```shell
+docker pull registry
+sudo apt-get install apache2-utils
+
+# 添加insecure-registries
+vim /etc/docker/daemon.json 
+{   ...
+   "insecure-registries": [
+      "192.168.1.159:5000"
+    ]
+}
+
+mkdir certs
+# 私有仓库生成证书和key
+openssl req  \
+-newkey rsa:4096 -nodes -sha256 -keyout certs/ikahe.org.key \
+-x509 -days 365 -out certs/ikahe.org.crt
+
+Country Name (2 letter code) [AU]:cn
+State or Province Name (full name) [Some-State]:zhejiang
+Locality Name (eg, city) []:taizhou
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:ikahe
+Organizational Unit Name (eg, section) []:linux
+Common Name (e.g. server FQDN or YOUR name) []:lihuimin
+Email Address []:lhm@ikahe.net
+
+mkdir auth
+htpasswd -bc auth/htpasswd li 123456
+# 查看
+cat auth/htpasswd
+
+docker run -d \
+--restart=always \
+--name registry \
+-v "$(pwd)"/certs:/certs \
+-e REGISTRY_HTTP_ADDR=0.0.0.0:443 \
+-e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/ikahe.org.crt \
+-e REGISTRY_HTTP_TLS_KEY=/certs/ikahe.org.key \
+-p 443:443 \
+-v /media/registry:/var/lib/registry \
+-v "$(pwd)"/auth:/auth \
+-e "REGISTRY_AUTH=htpasswd" \
+-e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+-e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+registry
+
+# 登录
+docker login
+Authenticating with existing credentials...
+Login Succeeded
+# 查看登录信息
+cat ~/.docker/config.json
+{
+        "auths": {
+                "https://index.docker.io/v1/": {}
+        },
+        "HttpHeaders": {
+                "User-Agent": "Docker-Client/19.03.12 (linux)"
+        },
+        "credsStore": "desktop.exe"
+}
+
+docker tag hello-world:latest 192.168.1.159:5000/hello-world:v1
+docker push 192.168.1.159:5000/hello-world:v1
+docker pull 192.168.1.159:5000/hello-world:v1
+```
+
+
 
 
 
