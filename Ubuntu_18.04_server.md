@@ -2777,6 +2777,65 @@ command:
     python3 manage.py runserver 0.0.0.0:8000
 ```
 
+## 7. 网络模型
+
+- Docker本地网络类型
+
+```shell
+docker network ls
+
+各类网络类型
+ docker run --network=type
+none : 无网络模式
+bridge ： 默认模式，相当于NAT
+host : 公用宿主机Network NameSapce
+container：与其他容器公用Network Namespace
+```
+
+- Docker跨主机网络介绍
+- Docker跨主机访问-macvlan实现
+
+```shell
+docker network create --driver macvlan --subnet=10.0.0.0/24 --gateway=10.0.0.254 -o parent=eth0 macvlan_1
+
+ip link set eth0 promsic on (ubuntu或其他版本需要)
+
+docker run -it --network macvlan_1 --ip 10.0.0.10 centos:6.9 /bin/bash
+docker run -it --network macvlan_1 --ip 10.0.0.11 centos:6.9 /bin/bash
+```
+
+- Docker 跨主机访问-overlay实现
+
+```shell
+# 启用consul服务，实现网络的统一配置管理
+docker run -d -p 8500:8500 -h consul --name consul progrium/consul -server -bootstrap
+
+consul：kv类型的存储数据库（key:value）
+docker01、02上：
+vim  /etc/docker/daemon.json
+{
+  "hosts":["tcp://0.0.0.0:2376","unix:///var/run/docker.sock"],
+  "cluster-store": "consul://10.0.0.100:8500",
+  "cluster-advertise": "10.0.0.100:2376"
+}
+
+vim /etc/docker/daemon.json 
+vim /usr/lib/systemd/system/docker.service
+systemctl daemon-reload 
+systemctl restart docker
+
+2）创建overlay网络
+docker network create -d overlay --subnet 172.16.0.0/24 --gateway 172.16.0.254  ol1
+
+3）启动容器测试
+docker run -it --network ol1 --name oldboy01  busybox /bin/bash
+每个容器有两块网卡,eth0实现容器间的通讯,eth1实现容器访问外网
+```
+
+
+
+
+
 
 
 
@@ -3010,6 +3069,20 @@ docker tag hello-world:latest 192.168.1.159:5000/hello-world:v1
 docker push 192.168.1.159:5000/hello-world:v1
 docker pull 192.168.1.159:5000/hello-world:v1
 ```
+
+## docker企业级镜像仓库harbor
+
+```shell
+第一步：安装docker和docker-compose
+第二步：下载harbor-offline-installer-v1.x.x.tgz
+第三步：上传到/opt,并解压
+第四步：修改harbor.cfg配置文件
+hostname = 10.0.0.101
+harbor_admin_password = 123456
+第五步：执行install.sh
+```
+
+
 
 
 
