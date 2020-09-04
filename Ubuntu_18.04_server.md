@@ -3015,6 +3015,8 @@ vim /etc/docker/daemon.json
     ]
 }
 
+systemctl daemon-reload && systemctl restart docker
+
 mkdir certs
 # 私有仓库生成证书和key
 openssl req  \
@@ -3326,6 +3328,50 @@ kubectl create -f deploy/kube-config/rbac/heapster-rbac.yaml
 
 kubectl get pods --namespace=kube-system
 ```
+
+## Pod.yaml
+
+pod-infrastructure
+
+node：（所有node节点）
+
+```shell
+vim /etc/kubernetes/kubelet
+KUBELET_POD_INFRA_CONTAINER="--pod-infra-container-image=10.0.0.11:5000/oldguo/pod-infrastructure:latest"
+
+systemctl restart kubelet.service
+```
+
+```shell
+kubectl get pod
+kubectl get pod -o wide
+kubectl get pods -o wide -l app=web
+kubectl descrie pod
+```
+
+```shell
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: web
+spec:
+  containers:
+    - name: nginx
+      image: 10.0.0.11:5000/oldguo/nginx:v1
+      ports:
+        - containerPort: 80
+```
+
+```shell
+kubectl create -f k8s_pod.yml
+kubectl delete pod nginx
+```
+
+
+
+
 
 ## Deployment.yaml
 
