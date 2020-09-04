@@ -772,7 +772,7 @@ nameserver 223.5.5.5
 
 nslookup 
 
-
+sudo /etc/init.d/networking restart
 
 # 创建自己的BLOG
 
@@ -2546,7 +2546,7 @@ docker-compose --version
 
 ```shell
 docker pull portainer/portainer && \
-docker run -d --name portainerUI -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock --restart= always portainer/portainer
+docker run -d --name portainerUI -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock --restart=always portainer/portainer
 ```
 
 
@@ -3031,7 +3031,7 @@ docker run -it -p 8080:80 --name mysite3-nginx \
 
 # K8S
 
-1. 系统检查
+## 系统检查
 
 ```shell
 # 修改主机名称
@@ -3042,9 +3042,16 @@ echo "192.168.150.59 k8s-master" >> /etc/hosts
 ufw status
 # 临时关闭swap
 swapoff -a
+# 永久关闭swap
+vi /etc/fstab
+# /swap.img     none    swap    sw      0       0
+free -m
+# 同时调整k8s的swappiness参数
+echo "vm.swappiness=0" >> /etc/sysctl.d/k8s.conf
+sysctl -p /etc/sysctl.d/k8s.conf
 ```
 
-2. docker-ce
+## docker-ce
 
 ```shell
 # 安装必要的一些系统工具
@@ -3071,7 +3078,7 @@ systemctl daemon-reload && systemctl restart docker
 
 
 
-3. kubeadm
+## kubeadm
 
 ```shell
 # 安装https
@@ -3083,7 +3090,7 @@ add-apt-repository "deb [arch=amd64] https://mirrors.aliyun.com/kubernetes/apt/ 
 # 更新源
 apt-get update
 # 查看1.15的最新版本
-apt-cache madison kubelet kubectl kubeadm |grep '1.15.4-00'
+apt-cache madison kubelet kubectl kubeadm |grep '1.15.12-00'
 # 安装指定的版本
 apt install -y kubelet=1.15.12-00 kubectl=1.15.12-00 kubeadm=1.15.12-00
 # 查看kubelet版本
@@ -3098,13 +3105,12 @@ journalctl -u kubelet -f
 
 至此，单个虚拟机配置完毕，接下来会clone一个虚拟机来配置集群环境
 
-4. 初始化k8s
+## 初始化k8s
 
 ```shell
 kubeadm init \
-  --kubernetes-version=v1.15.12 \
   --image-repository registry.aliyuncs.com/google_containers \
-  --pod-network-cidr=192.168.1.0/24 \
+  --pod-network-cidr=10.244.0.0/16 \
   --ignore-preflight-errors=Swap
   
 # 加入nodes
@@ -3117,7 +3123,7 @@ ca-cert. 执行命令openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | opens
 kubeadm token create --print-join-command
 ```
 
-5. kubectl配置调用
+## kubectl配置调用
 
 ```shell
 mkdir -p $HOME/.kube
@@ -3125,7 +3131,7 @@ cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-6. k8s网络flannel
+## k8s网络flannel
 
 https://github.com/coreos/flannel
 
@@ -3138,9 +3144,9 @@ grep -i image kube-flannel.yml
 docker pull quay.io/coreos/flannel:v0.12.0-amd64
 ```
 
-7. dashboard
+## dashboard
 
-https://github.com/kubernetes/dashboard#kubernetes-dashboard
+[最新版dashboard](##kubernetes-dashboard)
 
 ```shell
 kubectl get nodes
@@ -3158,9 +3164,10 @@ kubectl get pods -A
 kubectl get pod -n kube-system
 kubectl get pod,svc -n kube-system
 kubectl get namespaces
+kubectl delete -f dashboard.yaml
 ```
 
-8. 解决kubernetes-dashboard本地打开的问题
+## 解决kubernetes-dashboard本地打开的问题
 
 https://www.cnblogs.com/rainingnight/p/deploying-k8s-dashboard-ui.html
 
@@ -3207,7 +3214,7 @@ kubectl create -f  admin-user-role-binding.yaml
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
 ```
 
-9. 制作证书
+## 制作证书
 
 k8s默认启用了RBAC，并为未认证用户赋予了一个默认的身份：anonymous
 
@@ -3223,19 +3230,19 @@ grep 'client-key-data' ~/.kube/config | head -n 1 | awk '{print $2}' | base64 -d
 openssl pkcs12 -export -clcerts -inkey kubecfg.key -in kubecfg.crt -out kubecfg.p12 -name "kubernetes-client"
 ```
 
-10. 访问
+## 访问
 
 https://<HOST_IP>:30001
 
 进去，输入token即可进入,注意：token的值一行，不要分行
 
-11. 单节点k8s,默认pod不被调度在master节点
+## 单节点k8s,默认pod不被调度在master节点
 
 ```shell
 kubectl taint nodes --all node-role.kubernetes.io/master-
 ```
 
-12. 集成Heapster-[InfluxDB](https://github.com/kubernetes-retired/heapster/blob/master/docs/influxdb.md)
+## 集成Heapster-[InfluxDB](https://github.com/kubernetes-retired/heapster/blob/master/docs/influxdb.md)
 
 Heapster是容器集群监控和性能分析工具，天然的支持Kubernetes和CoreOS。
 
@@ -3247,7 +3254,7 @@ kubectl create -f deploy/kube-config/rbac/heapster-rbac.yaml
 kubectl get pods --namespace=kube-system
 ```
 
-13. Deployment.yaml
+## Deployment.yaml
 
 ```shell
 apiVersion: apps/v1
@@ -3274,7 +3281,7 @@ spec:
 
 
 
-13. NodePort
+## NodePort
 
 ```shell
 # server.yaml
@@ -3294,7 +3301,7 @@ spec:
   type: NodePort
 ```
 
-14. 直接删除pvc/pv持久化
+## 直接删除pvc/pv持久化
 
 ```shell
 kubectl patch pvc data-mysql-0 -p '{"metadata":{"finalizers": null}}' -n mt-math
@@ -3302,10 +3309,55 @@ kubectl patch pvc data-mysql-0 -p '{"metadata":{"finalizers": null}}' -n mt-math
 kubectl patch pv pv-nfs-mysql01 -p '{"metadata":{"finalizers":null}}'
 ```
 
-15. 卸载k8s
+## 卸载k8s
 
 ```shell
 kubeadm reset
+```
+
+## kubernetes-dashboard
+
+[kubernetes](https://github.com/kubernetes)/**[dashboard](https://github.com/kubernetes/dashboard)**
+
+```shell
+# 最新dashboard
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.3/aio/deploy/recommended.yaml
+
+# 后台开启proxy模式
+nohup kubectl proxy --address=192.168.1.185 --disable-filter=true &
+
+# 修改为type:NodePort
+kubectl -n kubernetes-dashboard edit service kubernetes-dashboard
+spec:
+  type: NodePort
+  ports:
+	  ...
+      nodePort: 30001
+
+# 创建dashboard-admin
+vim k8s-admin.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dashboard-admin
+  namespace: kube-system
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: dashboard-admin
+subjects:
+  - kind: ServiceAccount
+    name: dashboard-admin
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+  
+# 获取token值
+kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep dashboard-admin | awk '{print $1}')
+# kubectl describe secret dashboard-admin-token -n kube-system
 ```
 
 
