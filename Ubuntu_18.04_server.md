@@ -3412,32 +3412,32 @@ vim k8s-admin.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: dashboard-admin
-  namespace: kube-system
+  name: admin-user
+  namespace: kubernetes-dashboard
 ---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: dashboard-admin
-subjects:
-  - kind: ServiceAccount
-    name: dashboard-admin
-    namespace: kube-system
+  name: admin-user
 roleRef:
+  apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: cluster-admin
-  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
   
 # 获取token值
-kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep dashboard-admin | awk '{print $1}')
+kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
 # kubectl describe secret dashboard-admin-token -n kube-system
 ```
 
+### 汉化
 
-
-
-
-
-
-
+```shell
+env:
+	- name: ACCEPT_LANGUAGE
+      value: zh-Hans
+```
 
