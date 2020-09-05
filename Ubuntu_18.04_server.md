@@ -3020,31 +3020,55 @@ systemctl daemon-reload && systemctl restart docker
 mkdir certs
 # 私有仓库生成证书和key
 openssl req  \
--newkey rsa:4096 -nodes -sha256 -keyout certs/ikahe.org.key \
--x509 -days 365 -out certs/ikahe.org.crt
+-newkey rsa:4096 -nodes -sha256 -keyout certs/ikahe.com.key \
+-x509 -days 365 -out certs/ikahe.com.crt
 
 Country Name (2 letter code) [AU]:cn
 State or Province Name (full name) [Some-State]:zhejiang
 Locality Name (eg, city) []:taizhou
 Organization Name (eg, company) [Internet Widgits Pty Ltd]:ikahe
 Organizational Unit Name (eg, section) []:linux
-Common Name (e.g. server FQDN or YOUR name) []:lihuimin
+Common Name (e.g. server FQDN or YOUR name) []:ikahe.com
 Email Address []:lhm@ikahe.net
 
-mkdir auth
-htpasswd -bc auth/htpasswd li 123456
-# 查看
-cat auth/htpasswd
+cp ~/certs/ikahe.com.crt /etc/docker/certs.d/ikahe.com/ca.crt
 
 docker run -d \
 --restart=always \
 --name registry \
 -v "$(pwd)"/certs:/certs \
 -e REGISTRY_HTTP_ADDR=0.0.0.0:443 \
--e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/ikahe.org.crt \
--e REGISTRY_HTTP_TLS_KEY=/certs/ikahe.org.key \
+-e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/ikahe.com.crt \
+-e REGISTRY_HTTP_TLS_KEY=/certs/ikahe.com.key \
 -p 443:443 \
--v /media/registry:/var/lib/registry \
+-v /opt/registry:/var/lib/registry \
+registry
+
+docker tag nginx:latest ikahe.com/nginx:latest
+docker images
+docker push ikahe.com/nginx:latest
+
+# scp ca.crt到192.168.1.148主机
+scp /etc/docker/certs.d/ikahe.com/ca.crt root@192.168.1.148:/etc/docker/certs.d/ikahe.com/
+
+# 192.168.1.148主机
+vim /etc/hosts
+docker pull ikahe.com/nginx:latest
+docker images
+
+# 证书&加密
+mkdir auth
+htpasswd -Bbn admin 123456 >> auth/htpasswd
+
+docker run -d \
+--restart=always \
+--name registry \
+-v "$(pwd)"/certs:/certs \
+-e REGISTRY_HTTP_ADDR=0.0.0.0:443 \
+-e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/ikahe.com.crt \
+-e REGISTRY_HTTP_TLS_KEY=/certs/ikahe.com.key \
+-p 443:443 \
+-v /opt/registry:/var/lib/registry \
 -v "$(pwd)"/auth:/auth \
 -e "REGISTRY_AUTH=htpasswd" \
 -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
@@ -3053,7 +3077,6 @@ registry
 
 # 登录
 docker login
-Authenticating with existing credentials...
 Login Succeeded
 # 查看登录信息
 cat ~/.docker/config.json
@@ -3067,9 +3090,9 @@ cat ~/.docker/config.json
         "credsStore": "desktop.exe"
 }
 
-docker tag hello-world:latest 192.168.1.159:5000/hello-world:v1
-docker push 192.168.1.159:5000/hello-world:v1
-docker pull 192.168.1.159:5000/hello-world:v1
+docker tag hello-world:latest ikahe.com/hello-world:v1
+docker push ikahe.com/hello-world:v1
+docker pull ikahe.com/hello-world:v1
 ```
 
 ## docker企业级镜像仓库harbor
