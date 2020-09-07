@@ -3366,10 +3366,13 @@ systemctl restart kubelet.service
 ```
 
 ```shell
+kubectl create -f
 kubectl get pod
 kubectl get pod -o wide
 kubectl get pods -o wide -l app=web
 kubectl descrie pod
+kubectl delete pod nginx
+kubectl replace --force -f k8s_pod.yaml
 ```
 
 ```shell
@@ -3392,7 +3395,46 @@ kubectl create -f k8s_pod.yml
 kubectl delete pod nginx
 ```
 
+## RC.yml 
 
+```shell
+# k8s_nginx_rc.yml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nginx
+spec:
+  replicas: 3
+  selector:
+    app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: 10.0.0.11:5000/oldguo/nginx:v1
+        ports:
+        - containerPort: 80   
+```
+
+```shell
+kubectl create -f k8s_nginx_rc.yml
+kubectl get  rc
+kubectl delete   rc nginx
+kubectl replace  -f k8s_nginx_rc.yml
+kubectl scale rc RCNAME --replicas=4
+
+滚动升级及回滚：
+cp k8s_nginx_rc.yml k8s_nginx2_rc.yml
+kubectl rolling-update nginx -f k8s_nginx2_rc.yml  --update-period=10s
+注：
+在升级过程中，可以进行回退。
+# kubectl rolling-update OLDRCNAME NEWRCNAME --rollback 
+如果升级完成，则不可以，使用这条指令进行回退。
+# kubectl rolling-update OLDRCNAME -f  RCFILE --update-period=10s 
+```
 
 
 
