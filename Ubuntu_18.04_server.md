@@ -3483,9 +3483,49 @@ spec:
             - containerPort: 9999
 ```
 
+```shell
+vim  k8s_nginx_dev.yml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: 10.0.0.11:5000/oldguo/nginx:v2
+        ports:
+        - containerPort: 80
+```
+
+```shell
+kubectl create -f k8s_nginx_dev.yml
+kubectl get deployment
+
+# deployment滚动升级
+kubectl set image deployment/nginx nginx=10.0.0.11:5000/oldguo/nginx:v1
+kubectl rollout undo deployment/nginx
+```
+
+## HPA弹性伸缩
+
+```shell
+# 实现自动pod伸缩
+kubectl autoscale deployment nginx --min=2 --max=6 --cpu-percent=80
+
+# horizontalpodautoscalers
+kubectl get horizontalpodautoscalers 
+kubectl edit horizontalpodautoscalers nginx
+```
 
 
-## NodePort
+
+## Server.yaml
 
 ```shell
 # server.yaml
@@ -3505,7 +3545,47 @@ spec:
   type: NodePort
 ```
 
-## 直接删除pvc/pv持久化
+```shell
+kubectl create -f server.yml
+```
+
+
+
+## pvc/pv卷持久化
+
+```shell
+vim nfs_pv_data.yml 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv0001
+  labels:
+    type: nfs001
+spec:
+  capacity:
+    storage: 10Gi 
+  accessModes:
+    - ReadWriteMany 
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    path: "/data"
+    server: 10.0.0.11
+    readOnly: false
+```
+
+```shell
+cat nfs_pvc_mysql.yml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-mysql
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
 
 ```shell
 kubectl patch pvc data-mysql-0 -p '{"metadata":{"finalizers": null}}' -n mt-math
