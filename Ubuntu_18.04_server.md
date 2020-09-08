@@ -3219,7 +3219,27 @@ ca-cert. 执行命令openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | opens
 
 # 如果token失效(24小时有效期)，重新生成token
 kubeadm token create --print-join-command
+
+# 移除nodes
+kubectl get node
+kubectl get pods -o wide
+
+# 封锁node，排干node1上的pod
+kubectl drain k8s-node1 --delete-local-data --force --ignore-daemonsets
+# 删除node1节点
+kubectl delete node k8s-node1
+kubectl get pods -o wide
+
+# 在k8s-node1节点
+kubeadm reset
+ifconfig cni0 down
+ip link delete cni0
+ifconfig flannel.1 down
+ip link delete flannel.1
+rm -rf /var/lib/cni/
 ```
+
+
 
 ## kubectl配置调用
 
