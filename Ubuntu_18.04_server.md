@@ -473,15 +473,18 @@ sz filepath #sz pro_cel.rar
 # 修改IP地址
 
 ```shell
-vim /etc/netplan/00-installer-init.yaml
+sudo vim /etc/netplan/00-installer-init.yaml
 
 network:
-    ethernets:
-        ens33:
-            addresses: [192.168.1.205/24]
-            gateway4: 192.168.1.1
-            dhcp4: yes
-    version: 2
+  ethernets:
+    ens33:
+      addresses: [192.168.1.205/24]
+      gateway4: 192.168.1.1
+      dhcp4: no
+      optional: true
+      nameservers:
+        addresses: [8.8.8.8,114.114.114.114]
+  version: 2
 
 sudo netplan apply
 ```
@@ -3247,6 +3250,12 @@ rm -rf /var/lib/cni/
 mkdir -p $HOME/.kube
 cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 chown $(id -u):$(id -g) $HOME/.kube/config
+
+# 如果The connection to the server localhost:8080 was refused - did you specify the right host or port?
+echo "export KUBECONFIG=/etc/kubernetes/admin.conf" >> ~/.bash_profile
+source ~/.bash_profile
+
+kubectl get pods --all-namespaces
 ```
 
 ## k8s网络flannel
@@ -3528,7 +3537,7 @@ kubeadm reset
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.3/aio/deploy/recommended.yaml
 
 # 后台开启proxy模式
-nohup kubectl proxy --address=192.168.1.185 --disable-filter=true &
+nohup kubectl proxy --address=192.168.1.157 --disable-filter=true &
 
 # 修改为type:NodePort
 kubectl -n kubernetes-dashboard edit service kubernetes-dashboard
