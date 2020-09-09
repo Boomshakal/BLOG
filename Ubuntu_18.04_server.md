@@ -96,7 +96,7 @@ $ sudo apt install nfs-kernel-server -y
 2. 创建目录
 $ sudo mkdir -p /mnt/sharedfolder
 3. 使任何客户端均可访问
-$ sudo chown nobody:nogroup /mnt/sharedfolder　　
+$ sudo chown nobody:nogroup /mnt/sharedfolder/
 $ sudo chmod 755 /mnt/sharedfolder
 4. 配置/etc/exports文件, 使任何ip均可访问(加入以下语句)
 /mnt/sharedfolder *(rw,sync,no_subtree_check)
@@ -3100,6 +3100,8 @@ docker pull ikahe.com/hello-world:v1
 
 ## docker企业级镜像仓库harbor
 
+https://github.com/goharbor/harbor/releases
+
 ```shell
 第一步：安装docker和docker-compose
 第二步：下载harbor-offline-installer-v1.x.x.tgz
@@ -3656,8 +3658,13 @@ kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboar
 ### 汉化
 
 ```shell
-env:
-	- name: ACCEPT_LANGUAGE
-      value: zh-Hans
+spec:
+      containers:
+      - args:
+        - --auto-generate-certificates
+        - --namespace=kubernetes-dashboard
+        env:
+        - name: ACCEPT_LANGUAGE
+          value: zh-Hans
 ```
 
