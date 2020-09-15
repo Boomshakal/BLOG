@@ -176,6 +176,71 @@ sudo smbpasswd -a li
 sudo /etc/init.d/smbd restart
 ```
 
+# DNS服务器
+
+```shell
+vim named.conf.options
+options {
+        directory "/var/cache/bind";
+        listen-on port 53 { 192.168.1.102; 192.168.1.0/24; };
+        allow-query     { any; };
+        forwarders      { 192.168.1.1; }; #上一层DNS地址(网关或公网DNS)
+        recursion yes;
+};
+vim named.conf.local
+zone "host.com" IN {
+        type  master;
+        file  "host.com.zone";
+        allow-update { 192.168.1.102; };
+};
+# 添加自定义业务域
+zone "lhm.com" IN {
+        type  master;
+        file  "lhm.com.zone";
+        allow-update { 192.168.1.102; };
+};
+cd /var/cache/bind
+vim host.com.zone
+$ORIGIN host.com.
+$TTL 600    ; 10 minutes
+@       IN SOA  dns.host.com. dnsadmin.host.com. (
+                2020041601 ; serial
+                10800      ; refresh (3 hours)
+                900        ; retry (15 minutes)
+                604800     ; expire (1 week)
+                86400      ; minimum (1 day)
+                )
+            NS   dns.host.com.
+$TTL 60 ; 1 minute
+dns                A    192.168.1.102
+k8s-master         A    192.168.1.157
+k8s-node1          A    192.168.1.205
+k8s-node2          A    192.168.1.206
+
+vim lhm.com.zone 
+$ORIGIN lhm.com.
+$TTL 600    ; 10 minutes
+@       IN SOA  dns.lhm.com. dnsadmin.lhm.com. (
+                2020041601 ; serial
+                10800      ; refresh (3 hours)
+                900        ; retry (15 minutes)
+                604800     ; expire (1 week)
+                86400      ; minimum (1 day)
+                )
+            NS   dns.lhm.com.
+$TTL 60 ; 1 minute
+dns                A    192.168.1.102
+
+sudo systemctl enable bind9
+sudo systemctl restart bind9
+
+named-checkconf
+dig -t A k8s-master.host.com @192.168.1.102 +short
+192.168.1.157
+```
+
+
+
 # RAID磁盘阵列
 
 1. 识别组件设备
@@ -3375,6 +3440,8 @@ kubectl taint nodes --all node-role.kubernetes.io/master-
 
 Heapster是容器集群监控和性能分析工具，天然的支持Kubernetes和CoreOS。
 
+https://github.com/kubernetes-retired/heapster/archive/v1.6.0-beta.1.zip
+
 ```shell
 git clone https://github.com/kubernetes-retired/heapster.git
 kubectl create -f deploy/kube-config/influxdb/
@@ -3382,6 +3449,29 @@ kubectl create -f deploy/kube-config/rbac/heapster-rbac.yaml
 
 kubectl get pods --namespace=kube-system
 ```
+
+## kubectl get cs Unhealthy   
+
+https://llovewxm1314.blog.csdn.net/article/details/108458197
+
+```shell
+vim /etc/kubernetes/manifests/kube-controller-manager.yaml
+...
+ 27   #  - --port=0
+vim /etc/kubernetes/manifests/kube-scheduler.yam
+...
+ 19   #  - --port=0
+ 
+systemctl restart kubelet.service
+
+# kubectl get cs
+NAME                 STATUS    MESSAGE             ERROR
+scheduler            Healthy   ok
+controller-manager   Healthy   ok
+etcd-0               Healthy   {"health":"true"}
+```
+
+
 
 ## Pod.yaml
 
