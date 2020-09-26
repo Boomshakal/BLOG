@@ -179,6 +179,11 @@ sudo /etc/init.d/smbd restart
 # DNS服务器
 
 ```shell
+apt install bind9
+```
+
+```shell
+cd /etc/bind/
 vim named.conf.options
 options {
         directory "/var/cache/bind";
@@ -639,6 +644,16 @@ scp /home/soft/jdk-7u55-linux-i586.tar.gz root@192.168.132.132:/
 
 scp -r /home/soft root@192.168.132.132:/
 ```
+
+## Permission denied
+
+```shell
+vim /etc/ssh/sshd_config
+# PermitRootLogin no / without-password
+PermitRootLogin yes
+```
+
+
 
 
 #  配置桌面快捷方式
@@ -2262,7 +2277,7 @@ supervisorctl start program_name
 supervisorctl
 六、停止某一进程 (program_name=你配置中写的程序名称)
 
-pervisorctl stop program_name
+supervisorctl stop program_name
 七、重启某一进程 (program_name=你配置中写的程序名称)
 
 supervisorctl restart program_name
@@ -3088,8 +3103,8 @@ systemctl daemon-reload && systemctl restart docker
 mkdir certs
 # 私有仓库生成证书和key
 openssl req  \
--newkey rsa:4096 -nodes -sha256 -keyout certs/ikahe.com.key \
--x509 -days 365 -out certs/ikahe.com.crt
+-newkey rsa:4096 -nodes -sha256 -keyout certs/harbor.lhm.com.key \
+-x509 -days 365 -out certs/harbor.lhm.com.crt
 
 Country Name (2 letter code) [AU]:cn
 State or Province Name (full name) [Some-State]:zhejiang
@@ -3757,4 +3772,1553 @@ spec:
         - name: ACCEPT_LANGUAGE
           value: zh-Hans
 ```
+
+
+
+## 二进制安装
+
+### etcd
+
+```shell
+useradd -s /sbin/nologin -M etcd
+wget https://github.com/etcd-io/etcd/archive/v3.3.25.tar.gz
+tar xf etcd-v3.3.25-linux-amd64.tar.gz -C /opt/
+cd /opt/
+mv etcd-v3.1.20-linux-amd64/ etcd-v3.3.25
+ln -s /opt/etcd-v3.3.25/ /opt/etcd
+```
+
+```shell
+mkdir -p /opt/etcd/certs /data/etcd /data/logs/etcd-server
+chown -R etcd.etcd /opt/etcd-v3.3.25/
+chown -R etcd.etcd /data/etcd/
+chown -R etcd.etcd /data/logs/etcd-server/
+```
+
+```shell
+cd /opt/etcd/certs
+scp hdss7-200:/opt/certs/ca.pem .
+scp hdss7-200:/opt/certs/etcd-peer.pem .
+scp hdss7-200:/opt/certs/etcd-peer-key.pem .
+chown -R etcd.etcd /opt/etcd/certs
+```
+
+```shell
+cat >/opt/etcd/etcd-server-startup.sh <<'EOF'
+#!/bin/sh
+./etcd \
+    --name etcd-server-7-12 \
+    --data-dir /data/etcd/etcd-server \
+    --listen-peer-urls https://10.4.7.12:2380 \
+    --listen-client-urls https://10.4.7.12:2379,http://127.0.0.1:2379 \
+    --quota-backend-bytes 8000000000 \
+    --initial-advertise-peer-urls https://10.4.7.12:2380 \
+    --advertise-client-urls https://10.4.7.12:2379,http://127.0.0.1:2379 \
+    --initial-cluster  etcd-server-7-12=https://10.4.7.12:2380,etcd-server-7-21=https://10.4.7.21:2380,etcd-server-7-22=https://10.4.7.22:2380 \
+    --ca-file ./certs/ca.pem \
+    --cert-file ./certs/etcd-peer.pem \
+    --key-file ./certs/etcd-peer-key.pem \
+    --client-cert-auth  \
+    --trusted-ca-file ./certs/ca.pem \
+    --peer-ca-file ./certs/ca.pem \
+    --peer-cert-file ./certs/etcd-peer.pem \
+    --peer-key-file ./certs/etcd-peer-key.pem \
+    --peer-client-cert-auth \
+    --peer-trusted-ca-file ./certs/ca.pem \
+    --log-output stdout
+EOF
+
+chmod +x /opt/etcd/etcd-server-startup.sh
+```
+
+```shell
+apt install supervisor -y
+
+find / -name supervisor.sock
+
+unlink /run/supervisor.sock
+```
+
+```shell
+cat >/etc/supervisor/conf.d/etcd-server.conf <<EOF
+[program:etcd-server]  ; 显示的程序名,类型my.cnf,可以有多个
+command=sh /opt/etcd/etcd-server-startup.sh
+numprocs=1             ; 启动进程数 (def 1)
+directory=/opt/etcd    ; 启动命令前切换的目录 (def no cwd)
+autostart=true         ; 是否自启 (default: true)
+autorestart=true       ; 是否自动重启 (default: true)
+startsecs=30           ; 服务运行多久判断为成功(def. 1)
+startretries=3         ; 启动重试次数 (default 3)
+exitcodes=0,2          ; 退出状态码 (default 0,2)
+stopsignal=QUIT        ; 退出信号 (default TERM)
+stopwaitsecs=10        ; 退出延迟时间 (default 10)
+user=etcd              ; 运行用户
+redirect_stderr=true   ; 是否重定向错误输出到标准输出(def false)
+stdout_logfile=/data/logs/etcd-server/etcd.stdout.log
+stdout_logfile_maxbytes=64MB  ; 日志文件大小 (default 50MB)
+stdout_logfile_backups=4      ; 日志文件滚动个数 (default 10)
+stdout_capture_maxbytes=1MB   ; 设定capture管道的大小(default 0)
+;子进程还有子进程,需要添加这个参数,避免产生孤儿进程
+killasgroup=true
+stopasgroup=true
+EOF
+```
+
+```shell
+supervisorctl update
+supervisorctl status
+netstat -lntup|grep etcd
+```
+
+```shell
+/opt/etcd/etcdctl cluster-health
+/opt/etcd/etcdctl member list
+```
+
+
+
+### kube-apiserver
+
+```shell
+# 上传并解压缩
+tar xf kubernetes-server-linux-amd64-v1.15.12.tar.gz  -C /opt
+cd /opt
+mv kubernetes/ kubernetes-v1.15.12
+ln -s /opt/kubernetes-v1.15.12/ /opt/kubernetes
+
+# 清理源码包和docker镜像
+cd /opt/kubernetes
+rm -rf kubernetes-src.tar.gz
+cd server/bin
+rm -f *.tar
+rm -f *_tag
+
+# 创建命令软连接到系统环境变量下
+ln -s /opt/kubernetes/server/bin/kubectl /usr/bin/kubectl
+```
+
+```shell
+# 创建目录
+mkdir -p /opt/kubernetes/server/bin/cert
+cd /opt/kubernetes/server/bin/cert
+
+# 拷贝三套证书
+scp hdss7-200:/opt/certs/ca.pem .
+scp hdss7-200:/opt/certs/ca-key.pem .
+scp hdss7-200:/opt/certs/client.pem .
+scp hdss7-200:/opt/certs/client-key.pem .
+scp hdss7-200:/opt/certs/apiserver.pem .
+scp hdss7-200:/opt/certs/apiserver-key.pem .
+```
+
+```shell
+mkdir /opt/kubernetes/server/conf
+
+cat >/opt/kubernetes/server/conf/audit.yaml <<'EOF'
+apiVersion: audit.k8s.io/v1beta1 # This is required.
+kind: Policy
+# Don't generate audit events for all requests in RequestReceived stage.
+omitStages:
+  - "RequestReceived"
+rules:
+  # Log pod changes at RequestResponse level
+  - level: RequestResponse
+    resources:
+    - group: ""
+      # Resource "pods" doesn't match requests to any subresource of pods,
+      # which is consistent with the RBAC policy.
+      resources: ["pods"]
+  # Log "pods/log", "pods/status" at Metadata level
+  - level: Metadata
+    resources:
+    - group: ""
+      resources: ["pods/log", "pods/status"]
+
+  # Don't log requests to a configmap called "controller-leader"
+  - level: None
+    resources:
+    - group: ""
+      resources: ["configmaps"]
+      resourceNames: ["controller-leader"]
+
+  # Don't log watch requests by the "system:kube-proxy" on endpoints or services
+  - level: None
+    users: ["system:kube-proxy"]
+    verbs: ["watch"]
+    resources:
+    - group: "" # core API group
+      resources: ["endpoints", "services"]
+
+  # Don't log authenticated requests to certain non-resource URL paths.
+  - level: None
+    userGroups: ["system:authenticated"]
+    nonResourceURLs:
+    - "/api*" # Wildcard matching.
+    - "/version"
+
+  # Log the request body of configmap changes in kube-system.
+  - level: Request
+    resources:
+    - group: "" # core API group
+      resources: ["configmaps"]
+    # This rule only applies to resources in the "kube-system" namespace.
+    # The empty string "" can be used to select non-namespaced resources.
+    namespaces: ["kube-system"]
+
+  # Log configmap and secret changes in all other namespaces at the Metadata level.
+  - level: Metadata
+    resources:
+    - group: "" # core API group
+      resources: ["secrets", "configmaps"]
+
+  # Log all other resources in core and extensions at the Request level.
+  - level: Request
+    resources:
+    - group: "" # core API group
+    - group: "extensions" # Version of group should NOT be included.
+
+  # A catch-all rule to log all other requests at the Metadata level.
+  - level: Metadata
+    # Long-running requests like watches that fall under this rule will not
+    # generate an audit event in RequestReceived.
+    omitStages:
+      - "RequestReceived"
+EOF
+```
+
+```shell
+cat >/opt/kubernetes/server/bin/kube-apiserver.sh <<'EOF'
+#!/bin/bash
+./kube-apiserver \
+  --apiserver-count 2 \
+  --audit-log-path /data/logs/kubernetes/kube-apiserver/audit-log \
+  --audit-policy-file ../conf/audit.yaml \
+  --authorization-mode RBAC \
+  --client-ca-file ./cert/ca.pem \
+  --requestheader-client-ca-file ./cert/ca.pem \
+  --enable-admission-plugins NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
+  --etcd-cafile ./cert/ca.pem \
+  --etcd-certfile ./cert/client.pem \
+  --etcd-keyfile ./cert/client-key.pem \
+  --etcd-servers https://10.4.7.12:2379,https://10.4.7.21:2379,https://10.4.7.22:2379 \
+  --service-account-key-file ./cert/ca-key.pem \
+  --service-cluster-ip-range 192.168.0.0/16 \
+  --service-node-port-range 3000-29999 \
+  --target-ram-mb=1024 \
+  --kubelet-client-certificate ./cert/client.pem \
+  --kubelet-client-key ./cert/client-key.pem \
+  --log-dir  /data/logs/kubernetes/kube-apiserver \
+  --tls-cert-file ./cert/apiserver.pem \
+  --tls-private-key-file ./cert/apiserver-key.pem \
+  --v 2
+EOF
+
+# 授权
+chmod +x /opt/kubernetes/server/bin/kube-apiserver.sh
+```
+
+```shell
+cat >/etc/supervisor/conf.d/kube-apiserver.conf <<EOF
+[program:kube-apiserver]      ; 显示的程序名,类似my.cnf,可以有多个
+command=sh /opt/kubernetes/server/bin/kube-apiserver.sh
+numprocs=1                    ; 启动进程数 (def 1)
+directory=/opt/kubernetes/server/bin
+autostart=true                ; 是否自启 (default: true)
+autorestart=true              ; 是否自动重启 (default: true)
+startsecs=30                  ; 服务运行多久判断为成功(def. 1)
+startretries=3                ; 启动重试次数 (default 3)
+exitcodes=0,2                 ; 退出状态码 (default 0,2)
+stopsignal=QUIT               ; 退出信号 (default TERM)
+stopwaitsecs=10               ; 退出延迟时间 (default 10)
+user=root                     ; 运行用户
+redirect_stderr=true          ; 重定向错误输出到标准输出(def false)
+stdout_logfile=/data/logs/kubernetes/kube-apiserver/apiserver.stdout.log
+stdout_logfile_maxbytes=64MB  ; 日志文件大小 (default 50MB)
+stdout_logfile_backups=4      ; 日志文件滚动个数 (default 10)
+stdout_capture_maxbytes=1MB   ; 设定capture管道的大小(default 0)
+;子进程还有子进程,需要添加这个参数,避免产生孤儿进程
+killasgroup=true
+stopasgroup=true
+EOF
+```
+
+```shell
+mkdir -p /data/logs/kubernetes/kube-apiserver
+supervisorctl update
+supervisorctl status
+netstat -nltup|grep kube-api
+```
+
+### controller-manager
+
+```shell
+cat >/opt/kubernetes/server/bin/kube-controller-manager.sh <<'EOF'
+#!/bin/sh
+./kube-controller-manager \
+  --cluster-cidr 172.7.0.0/16 \
+  --leader-elect true \
+  --log-dir /data/logs/kubernetes/kube-controller-manager \
+  --master http://127.0.0.1:8080 \
+  --service-account-private-key-file ./cert/ca-key.pem \
+  --service-cluster-ip-range 192.168.0.0/16 \
+  --root-ca-file ./cert/ca.pem \
+  --v 2 
+EOF
+
+chmod +x /opt/kubernetes/server/bin/kube-controller-manager.sh
+```
+
+
+
+```shell
+cat >/etc/supervisor/conf.d/kube-conntroller-manager.conf <<EOF
+[program:kube-controller-manager] ; 显示的程序名
+command=sh /opt/kubernetes/server/bin/kube-controller-manager.sh
+numprocs=1                    ; 启动进程数 (def 1)
+directory=/opt/kubernetes/server/bin
+autostart=true                ; 是否自启 (default: true)
+autorestart=true              ; 是否自动重启 (default: true)
+startsecs=30                  ; 服务运行多久判断为成功(def. 1)
+startretries=3                ; 启动重试次数 (default 3)
+exitcodes=0,2                 ; 退出状态码 (default 0,2)
+stopsignal=QUIT               ; 退出信号 (default TERM)
+stopwaitsecs=10               ; 退出延迟时间 (default 10)
+user=root                     ; 运行用户
+redirect_stderr=true          ; 重定向错误输出到标准输出(def false)
+stdout_logfile=/data/logs/kubernetes/kube-controller-manager/controller.stdout.log
+stdout_logfile_maxbytes=64MB  ; 日志文件大小 (default 50MB)
+stdout_logfile_backups=4      ; 日志文件滚动个数 (default 10)
+stdout_capture_maxbytes=1MB   ; 设定capture管道的大小(default 0)
+;子进程还有子进程,需要添加这个参数,避免产生孤儿进程
+killasgroup=true
+stopasgroup=true
+EOF
+```
+
+```shell
+mkdir -p /data/logs/kubernetes/kube-controller-manager
+supervisorctl update
+supervisorctl status
+```
+
+### kube-scheduler
+
+```shell
+cat >/opt/kubernetes/server/bin/kube-scheduler.sh <<'EOF'
+#!/bin/sh
+./kube-scheduler \
+  --leader-elect  \
+  --log-dir /data/logs/kubernetes/kube-scheduler \
+  --master http://127.0.0.1:8080 \
+  --v 2
+EOF
+
+chmod +x  /opt/kubernetes/server/bin/kube-scheduler.sh
+```
+
+```shell
+cat >/etc/supervisor/conf.d/kube-scheduler.conf <<EOF
+[program:kube-scheduler]
+command=sh /opt/kubernetes/server/bin/kube-scheduler.sh
+numprocs=1                    ; 启动进程数 (def 1)
+directory=/opt/kubernetes/server/bin
+autostart=true                ; 是否自启 (default: true)
+autorestart=true              ; 是否自动重启 (default: true)
+startsecs=30                  ; 服务运行多久判断为成功(def. 1)
+startretries=3                ; 启动重试次数 (default 3)
+exitcodes=0,2                 ; 退出状态码 (default 0,2)
+stopsignal=QUIT               ; 退出信号 (default TERM)
+stopwaitsecs=10               ; 退出延迟时间 (default 10)
+user=root                     ; 运行用户
+redirect_stderr=true          ; 重定向错误输出到标准输出(def false)
+stdout_logfile=/data/logs/kubernetes/kube-scheduler/scheduler.stdout.log
+stdout_logfile_maxbytes=64MB  ; 日志文件大小 (default 50MB)
+stdout_logfile_backups=4      ; 日志文件滚动个数 (default 10)
+stdout_capture_maxbytes=1MB   ; 设定capture管道的大小(default 0)
+;子进程还有子进程,需要添加这个参数,避免产生孤儿进程
+killasgroup=true
+stopasgroup=true
+EOF
+```
+
+```shell
+mkdir -p /data/logs/kubernetes/kube-scheduler
+supervisorctl update
+supervisorctl statusa
+```
+
+### **keepalived**
+
+```shell
+apt install nginx keepalived -y
+```
+
+```shell
+mkdir /etc/nginx/tcp.d/
+echo 'include /etc/nginx/tcp.d/*.conf;' >>/etc/nginx/nginx.conf
+
+cat >/etc/nginx/tcp.d/apiserver.conf <<EOF
+stream {
+    upstream kube-apiserver {
+        server 10.4.7.21:6443     max_fails=3 fail_timeout=30s;
+        server 10.4.7.22:6443     max_fails=3 fail_timeout=30s;
+    }
+    server {
+        listen 7443;
+        proxy_connect_timeout 2s;
+        proxy_timeout 900s;
+        proxy_pass kube-apiserver;
+    }
+}
+EOF
+```
+
+```shell
+nginx -t
+systemctl start nginx
+systemctl enable nginx
+```
+
+```shell
+cat >/etc/keepalived/check_port.sh <<'EOF'
+#!/bin/bash
+#keepalived 监控端口脚本
+#使用方法：等待keepalived传入端口参数,检查改端口是否存在并返回结果
+CHK_PORT=$1
+if [ -n "$CHK_PORT" ];then
+        PORT_PROCESS=`ss -lnt|grep $CHK_PORT|wc -l`
+        if [ $PORT_PROCESS -eq 0 ];then
+                echo "Port $CHK_PORT Is Not Used,End."
+                exit 1
+        fi
+else
+        echo "Check Port Cant Be Empty!"
+fi
+EOF
+
+chmod +x /etc/keepalived/check_port.sh
+```
+
+```shell
+# keepalived主
+cat >/etc/keepalived/keepalived.conf <<'EOF'
+! Configuration File for keepalived
+global_defs {
+   router_id 10.4.7.11
+}
+vrrp_script chk_nginx {
+    script "/etc/keepalived/check_port.sh 7443"
+    interval 2
+    weight -20
+}
+vrrp_instance VI_1 {
+    state MASTER
+    interface ens33
+    virtual_router_id 251
+    priority 100
+    advert_int 1
+    mcast_src_ip 10.4.7.11
+    nopreempt
+
+    authentication {
+        auth_type PASS
+        auth_pass 11111111
+    }
+    track_script {
+         chk_nginx
+    }
+    virtual_ipaddress {
+        10.4.7.10
+    }
+}
+EOF
+```
+
+```shell
+# keepalived从
+cat >/etc/keepalived/keepalived.conf <<'EOF'
+! Configuration File for keepalived
+global_defs {
+    router_id 10.4.7.12
+}
+vrrp_script chk_nginx {
+    script "/etc/keepalived/check_port.sh 7443"
+    interval 2
+    weight -20
+}
+vrrp_instance VI_1 {
+    state BACKUP
+    interface ens33
+    virtual_router_id 251
+    mcast_src_ip 10.4.7.12
+    priority 90
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 11111111
+    }
+    track_script {
+        chk_nginx
+    }
+    virtual_ipaddress {
+        10.4.7.10
+    }
+}
+EOF
+```
+
+```shell
+systemctl start  keepalived
+systemctl enable keepalived
+ip addr|grep '10.4.7.10'
+```
+
+### node
+
+```shell
+cd /opt/kubernetes/server/bin/cert
+scp hdss7-200:/opt/certs/kubelet.pem .
+scp hdss7-200:/opt/certs/kubelet-key.pem .
+```
+
+```shell
+cd /opt/kubernetes/server/conf/
+
+kubectl config set-cluster myk8s \
+    --certificate-authority=/opt/kubernetes/server/bin/cert/ca.pem \
+    --embed-certs=true \
+    --server=https://10.4.7.10:7443 \
+    --kubeconfig=kubelet.kubeconfig
+```
+
+```shell
+kubectl config set-credentials k8s-node \
+    --client-certificate=/opt/kubernetes/server/bin/cert/client.pem \
+    --client-key=/opt/kubernetes/server/bin/cert/client-key.pem \
+    --embed-certs=true \
+    --kubeconfig=kubelet.kubeconfig
+```
+
+```shell
+kubectl config set-context myk8s-context \
+    --cluster=myk8s \
+    --user=k8s-node \
+    --kubeconfig=kubelet.kubeconfig
+```
+
+```shell
+kubectl config use-context myk8s-context --kubeconfig=kubelet.kubeconfig
+
+cat kubelet.kubeconfig 
+```
+
+```shell
+cat >/opt/kubernetes/server/conf/k8s-node.yaml <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-node
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:node
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: k8s-node
+EOF
+
+kubectl create -f /opt/kubernetes/server/conf/k8s-node.yaml
+kubectl get clusterrolebinding k8s-node
+kubectl get clusterrolebinding k8s-node -o yaml
+kubectl get nodes
+No resources found.
+```
+
+```shell
+cat >/opt/kubernetes/server/bin/kubelet.sh <<'EOF'
+#!/bin/sh
+./kubelet \
+  --hostname-override hdss7-21.host.com \
+  --anonymous-auth=false \
+  --cgroup-driver systemd \
+  --cluster-dns 192.168.0.2 \
+  --cluster-domain cluster.local \
+  --runtime-cgroups=/systemd/system.slice \
+  --kubelet-cgroups=/systemd/system.slice \
+  --fail-swap-on="false" \
+  --client-ca-file ./cert/ca.pem \
+  --tls-cert-file ./cert/kubelet.pem \
+  --tls-private-key-file ./cert/kubelet-key.pem \
+  --image-gc-high-threshold 20 \
+  --image-gc-low-threshold 10 \
+  --kubeconfig ../conf/kubelet.kubeconfig \
+  --log-dir /data/logs/kubernetes/kube-kubelet \
+  --pod-infra-container-image harbor.zq.com/public/pause:latest \
+  --root-dir /data/kubelet
+EOF
+
+# 创建目录&授权
+chmod +x /opt/kubernetes/server/bin/kubelet.sh
+mkdir -p /data/logs/kubernetes/kube-kubelet
+mkdir -p /data/kubelet
+```
+
+```shell
+cat >/etc/supervisor/conf.d/kube-kubelet.conf  <<EOF
+[program:kube-kubelet]
+command=sh /opt/kubernetes/server/bin/kubelet.sh
+numprocs=1                    ; 启动进程数 (def 1)
+directory=/opt/kubernetes/server/bin    
+autostart=true                ; 是否自启 (default: true)
+autorestart=true              ; 是否自动重启 (default: true)
+startsecs=30                  ; 服务运行多久判断为成功(def. 1)
+startretries=3                ; 启动重试次数 (default 3)
+exitcodes=0,2                 ; 退出状态码 (default 0,2)
+stopsignal=QUIT               ; 退出信号 (default TERM)
+stopwaitsecs=10               ; 退出延迟时间 (default 10)
+user=root                     ; 运行用户
+redirect_stderr=true          ; 重定向错误输出到标准输出(def false)
+stdout_logfile=/data/logs/kubernetes/kube-kubelet/kubelet.stdout.log
+stdout_logfile_maxbytes=64MB  ; 日志文件大小 (default 50MB)
+stdout_logfile_backups=4      ; 日志文件滚动个数 (default 10)
+stdout_capture_maxbytes=1MB   ; 设定capture管道的大小(default 0)
+;子进程还有子进程,需要添加这个参数,避免产生孤儿进程
+killasgroup=true
+stopasgroup=true
+EOF
+```
+
+```shell
+supervisorctl update
+supervisorctl status
+kubectl get nodes
+```
+
+### kube-proxy
+
+```shell
+cd /opt/kubernetes/server/bin/cert
+scp hdss7-200:/opt/certs/kube-proxy-client.pem .
+scp hdss7-200:/opt/certs/kube-proxy-client-key.pem .
+```
+
+```shell
+cd /opt/kubernetes/server/conf/
+
+kubectl config set-cluster myk8s \
+    --certificate-authority=/opt/kubernetes/server/bin/cert/ca.pem \
+    --embed-certs=true \
+    --server=https://10.4.7.10:7443 \
+    --kubeconfig=kube-proxy.kubeconfig
+
+kubectl config set-credentials kube-proxy \
+    --client-certificate=/opt/kubernetes/server/bin/cert/kube-proxy-client.pem \
+    --client-key=/opt/kubernetes/server/bin/cert/kube-proxy-client-key.pem \
+    --embed-certs=true \
+    --kubeconfig=kube-proxy.kubeconfig
+    
+kubectl config set-context myk8s-context \
+    --cluster=myk8s \
+    --user=kube-proxy \
+    --kubeconfig=kube-proxy.kubeconfig
+    
+kubectl config use-context myk8s-context --kubeconfig=kube-proxy.kubeconfig
+```
+
+```shell
+# 创建开机ipvs脚本
+cat >/etc/ipvs.sh <<'EOF'
+#!/bin/bash
+ipvs_mods_dir="/usr/lib/modules/$(uname -r)/kernel/net/netfilter/ipvs"
+for i in $(ls $ipvs_mods_dir|grep -o "^[^.]*")
+do
+  /sbin/modinfo -F filename $i &>/dev/null
+  if [ $? -eq 0 ];then
+    /sbin/modprobe $i
+  fi
+done
+EOF
+
+# 执行脚本开启ipvs
+sh /etc/ipvs.sh 
+
+lsmod |grep ip_vs
+```
+
+```shell
+cat >/opt/kubernetes/server/bin/kube-proxy.sh <<'EOF'
+#!/bin/sh
+./kube-proxy \
+  --hostname-override hdss7-21.host.com \
+  --cluster-cidr 172.7.0.0/16 \
+  --proxy-mode=ipvs \
+  --ipvs-scheduler=nq \
+  --kubeconfig ../conf/kube-proxy.kubeconfig
+EOF
+
+# 授权
+chmod +x /opt/kubernetes/server/bin/kube-proxy.sh 
+```
+
+```shell
+cat >/etc/supervisor/conf.d/kube-proxy.conf <<'EOF'
+[program:kube-proxy]
+command=sh /opt/kubernetes/server/bin/kube-proxy.sh
+numprocs=1                    ; 启动进程数 (def 1)
+directory=/opt/kubernetes/server/bin
+autostart=true                ; 是否自启 (default: true)
+autorestart=true              ; 是否自动重启 (default: true)
+startsecs=30                  ; 服务运行多久判断为成功(def. 1)
+startretries=3                ; 启动重试次数 (default 3)
+exitcodes=0,2                 ; 退出状态码 (default 0,2)
+stopsignal=QUIT               ; 退出信号 (default TERM)
+stopwaitsecs=10               ; 退出延迟时间 (default 10)
+user=root                     ; 运行用户
+redirect_stderr=true          ; 重定向错误输出到标准输出(def false)
+stdout_logfile=/data/logs/kubernetes/kube-proxy/proxy.stdout.log
+stdout_logfile_maxbytes=64MB  ; 日志文件大小 (default 50MB)
+stdout_logfile_backups=4      ; 日志文件滚动个数 (default 10)
+stdout_capture_maxbytes=1MB   ; 设定capture管道的大小(default 0)
+;子进程还有子进程,需要添加这个参数,避免产生孤儿进程
+killasgroup=true
+stopasgroup=true
+EOF
+```
+
+```shell
+mkdir -p /data/logs/kubernetes/kube-proxy
+supervisorctl update
+supervisorctl status
+kubectl get svc
+
+apt install ipvsadm -y
+ipvsadm -Ln
+```
+
+### 验证集群
+
+```shell
+cat >/root/nginx-ds.yaml <<'EOF'
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: nginx-ds
+spec:
+  template:
+    metadata:
+      labels:
+        app: nginx-ds
+    spec:
+      containers:
+      - name: my-nginx
+        image: harbor.zq.com/public/nginx:v1.17.9
+        ports:
+        - containerPort: 80
+EOF
+
+kubectl create -f /root/nginx-ds.yaml
+
+kubectl get cs
+kubectl get nodes 
+kubectl get pods
+```
+
+### flannel
+
+```shell
+/opt/etcd/etcdctl set /coreos.com/network/config '{"Network": "172.7.0.0/16", "Backend": {"Type": "host-gw"}}'
+
+/opt/etcd/etcdctl get /coreos.com/network/config
+```
+
+```shell
+wget https://github.com/coreos/flannel/releases/download/v0.12.0/flannel-v0.12.0-linux-amd64.tar.gz
+mkdir /opt/flannel-v0.12.0
+tar xf flannel-v0.12.0-linux-amd64.tar.gz -C /opt/flannel-v0.12.0/
+ln -s /opt/flannel-v0.12.0/ /opt/flannel
+```
+
+```shell
+cd /opt/flannel
+mkdir cert
+scp hdss7-200:/opt/certs/ca.pem         cert/ 
+scp hdss7-200:/opt/certs/client.pem     cert/ 
+scp hdss7-200:/opt/certs/client-key.pem cert/ 
+```
+
+```shell
+cat >/opt/flannel/subnet.env <<EOF
+FLANNEL_NETWORK=172.7.0.0/16
+FLANNEL_SUBNET=172.7.21.1/24
+FLANNEL_MTU=1500
+FLANNEL_IPMASQ=false
+EOF
+```
+
+```shell
+cat >/opt/flannel/flanneld.sh <<'EOF'
+#!/bin/sh
+./flanneld \
+  --public-ip=10.4.7.21 \
+  --etcd-endpoints=https://10.4.7.12:2379,https://10.4.7.21:2379,https://10.4.7.22:2379 \
+  --etcd-keyfile=./cert/client-key.pem \
+  --etcd-certfile=./cert/client.pem \
+  --etcd-cafile=./cert/ca.pem \
+  --iface=ens33 \
+  --subnet-file=./subnet.env \
+  --healthz-port=2401
+EOF
+
+chmod +x flanneld.sh
+```
+
+```shell
+cat >/etc/supervisor/conf.d/flannel.conf <<EOF
+[program:flanneld]
+command=sh /opt/flannel/flanneld.sh
+numprocs=1
+directory=/opt/flannel
+autostart=true
+autorestart=true
+startsecs=30
+startretries=3
+exitcodes=0,2
+stopsignal=QUIT
+stopwaitsecs=10
+user=root
+redirect_stderr=true
+stdout_logfile=/data/logs/flanneld/flanneld.stdout.log
+stdout_logfile_maxbytes=64MB
+stdout_logfile_backups=4
+stdout_capture_maxbytes=1MB
+;子进程还有子进程,需要添加这个参数,避免产生孤儿进程
+killasgroup=true
+stopasgroup=true
+EOF
+```
+
+```shell
+mkdir -p /data/logs/flanneld
+supervisorctl update
+supervisorctl status
+```
+
+```shell
+route -n|egrep -i '172.7|des'
+
+ping 172.7.22.2
+ping 172.7.21.2
+```
+
+#### 优化iptables规则
+
+```shell
+iptables-save |grep -i postrouting|grep docker0
+-A POSTROUTING -s 172.7.21.0/24 ! -o docker0 -j MASQUERADE
+
+apt install iptables -y
+iptables -t nat -D POSTROUTING -s 172.7.21.0/24 ! -o docker0 -j MASQUERADE
+iptables -t nat -I POSTROUTING -s 172.7.21.0/24 ! -d 172.7.0.0/16 ! -o docker0  -j MASQUERADE
+
+iptables-save |grep -i postrouting|grep docker0
+
+iptables-save > /etc/iptables.up.rules 
+vim /etc/network/interfaces
+auto ens33 
+iface ens33 inet dhcp 
+pre-up iptables-restore < /etc/iptables.up.rules 
+
+# 重启docker 会重新生成iptables规则，需重新删掉
+systemctl restart docker
+iptables-save |grep -i postrouting|grep docker0
+iptables-restore /etc/sysconfig/iptables
+iptables-save |grep -i postrouting|grep docker0
+```
+
+```shell
+docker pull busybox
+[hdss7-22 #] kubectl logs nginx-ds-j777c --tail=10 -f
+docker run --rm -it busybox
+wget 172.7.22.2
+```
+
+### coredns
+
+```shell
+docker pull docker.io/coredns/coredns:1.6.1
+docker tag coredns:1.6.1 harbor.zq.com/public/coredns:v1.6.1
+docker push harbor.zq.com/public/coredns:v1.6.1
+```
+
+```shell
+mkdir -p /data/k8s-yaml/coredns
+```
+
+```shell
+cat >/data/k8s-yaml/coredns/rbac.yaml <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: coredns
+  namespace: kube-system
+  labels:
+      kubernetes.io/cluster-service: "true"
+      addonmanager.kubernetes.io/mode: Reconcile
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: system:coredns
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - services
+  - pods
+  - namespaces
+  verbs:
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+    addonmanager.kubernetes.io/mode: EnsureExists
+  name: system:coredns
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:coredns
+subjects:
+- kind: ServiceAccount
+  name: coredns
+  namespace: kube-system
+EOF
+```
+
+```shell
+cat >/data/k8s-yaml/coredns/cm.yaml <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+data:
+  Corefile: |
+    .:53 {
+        errors
+        log
+        health
+        ready
+        kubernetes cluster.local 192.168.0.0/16  #service资源cluster地址
+        forward . 10.4.7.11   #上级DNS地址
+        cache 30
+        loop
+        reload
+        loadbalance
+       }
+EOF
+```
+
+```shell
+cat >/data/k8s-yaml/coredns/dp.yaml <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: kube-system
+  labels:
+    k8s-app: coredns
+    kubernetes.io/name: "CoreDNS"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: coredns
+  template:
+    metadata:
+      labels:
+        k8s-app: coredns
+    spec:
+      priorityClassName: system-cluster-critical
+      serviceAccountName: coredns
+      containers:
+      - name: coredns
+        image: harbor.zq.com/public/coredns:v1.6.1
+        args:
+        - -conf
+        - /etc/coredns/Corefile
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/coredns
+        ports:
+        - containerPort: 53
+          name: dns
+          protocol: UDP
+        - containerPort: 53
+          name: dns-tcp
+          protocol: TCP
+        - containerPort: 9153
+          name: metrics
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
+      dnsPolicy: Default
+      volumes:
+        - name: config-volume
+          configMap:
+            name: coredns
+            items:
+            - key: Corefile
+              path: Corefile
+EOF
+```
+
+```shell
+cat >/data/k8s-yaml/coredns/svc.yaml <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns
+  namespace: kube-system
+  labels:
+    k8s-app: coredns
+    kubernetes.io/cluster-service: "true"
+    kubernetes.io/name: "CoreDNS"
+spec:
+  selector:
+    k8s-app: coredns
+  clusterIP: 192.168.0.2
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+  - name: metrics
+    port: 9153
+    protocol: TCP
+EOF
+```
+
+```shell
+dig -t A harbor.zq.com  +short
+
+kubectl create -f http://k8s-yaml.zq.com/coredns/rbac.yaml
+kubectl create -f http://k8s-yaml.zq.com/coredns/cm.yaml
+kubectl create -f http://k8s-yaml.zq.com/coredns/dp.yaml
+kubectl create -f http://k8s-yaml.zq.com/coredns/svc.yaml
+```
+
+```shell
+kubectl get all -n kube-system
+kubectl get svc -o wide -n kube-system
+dig -t A www.baidu.com @192.168.0.2 +short
+dig -t A harbor.zq.com @192.168.0.2 +short  (forward . 10.4.7.11)
+```
+
+```shell
+kubectl create deployment nginx-dp --image=harbor.zq.com/public/nginx:v1.17.9 -n kube-public
+kubectl expose deployment nginx-dp --port=80 -n kube-public
+
+dig -t A nginx-dp @192.168.0.2 +short
+dig -t A nginx-dp.kube-public.svc.cluster.local. @192.168.0.2 +short
+
+# 进入到pod内部再次验证
+kubectl -n kube-public exec -it nginx-dp-568f8dc55-rxvx2 /bin/bash
+apt update && apt install curl
+ping nginx-dp
+
+cat /etc/resolv.conf 
+nameserver 192.168.0.2
+search kube-public.svc.cluster.local svc.cluster.local cluster.local host.com
+options ndots:5
+```
+
+
+
+### Ingress-traefik
+
+```shell
+docker pull traefik:v1.7.2-alpine
+docker tag  traefik:v1.7.2-alpine harbor.zq.com/public/traefik:v1.7.2
+docker push harbor.zq.com/public/traefik:v1.7.2
+```
+
+```shell
+mkdir -p /data/k8s-yaml/traefik
+```
+
+```shell
+cat >/data/k8s-yaml/traefik/rbac.yaml <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik-ingress-controller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: traefik-ingress-controller
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - endpoints
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - extensions
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: traefik-ingress-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: traefik-ingress-controller
+subjects:
+- kind: ServiceAccount
+  name: traefik-ingress-controller
+  namespace: kube-system
+EOF
+```
+
+```shell
+cat >/data/k8s-yaml/traefik/ds.yaml <<EOF
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: traefik-ingress
+  namespace: kube-system
+  labels:
+    k8s-app: traefik-ingress
+spec:
+  template:
+    metadata:
+      labels:
+        k8s-app: traefik-ingress
+        name: traefik-ingress
+    spec:
+      serviceAccountName: traefik-ingress-controller
+      terminationGracePeriodSeconds: 60
+      containers:
+      - image: harbor.zq.com/public/traefik:v1.7.2
+        name: traefik-ingress
+        ports:
+        - name: controller
+          containerPort: 80
+          hostPort: 81
+        - name: admin-web
+          containerPort: 8080
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+        args:
+        - --api
+        - --kubernetes
+        - --logLevel=INFO
+        - --insecureskipverify=true
+        - --kubernetes.endpoint=https://10.4.7.10:7443
+        - --accesslog
+        - --accesslog.filepath=/var/log/traefik_access.log
+        - --traefiklog
+        - --traefiklog.filepath=/var/log/traefik.log
+        - --metrics.prometheus
+EOF
+```
+
+```shell
+cat >/data/k8s-yaml/traefik/svc.yaml <<EOF
+kind: Service
+apiVersion: v1
+metadata:
+  name: traefik-ingress-service
+  namespace: kube-system
+spec:
+  selector:
+    k8s-app: traefik-ingress
+  ports:
+    - protocol: TCP
+      port: 80
+      name: controller
+    - protocol: TCP
+      port: 8080
+      name: admin-web
+EOF
+```
+
+```shell
+cat >/data/k8s-yaml/traefik/ingress.yaml <<EOF
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: traefik-web-ui
+  namespace: kube-system
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  - host: traefik.zq.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: traefik-ingress-service
+          servicePort: 8080
+EOF
+```
+
+```shell
+kubectl create -f http://k8s-yaml.zq.com/traefik/rbac.yaml
+kubectl create -f http://k8s-yaml.zq.com/traefik/ds.yaml
+kubectl create -f http://k8s-yaml.zq.com/traefik/svc.yaml
+kubectl create -f http://k8s-yaml.zq.com/traefik/ingress.yaml
+```
+
+```shell
+# 在7.11和7.12上,都做反向代理,将泛域名的解析都转发到traefik上去
+cat >/etc/nginx/conf.d/zq.com.conf <<'EOF'
+upstream default_backend_traefik {
+    server 10.4.7.21:81    max_fails=3 fail_timeout=10s;
+    server 10.4.7.22:81    max_fails=3 fail_timeout=10s;
+}
+server {
+    server_name *.zq.com;
+  
+    location / {
+        proxy_pass http://default_backend_traefik;
+        proxy_set_header Host       $http_host;
+        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
+    }
+}
+EOF
+
+# 重启nginx服务
+nginx -t
+nginx -s reload
+```
+
+```shell
+vi /var/named/zq.com.zone
+........
+traefik            A    10.4.7.10
+
+systemctl restart bind9.service
+dig -t A traefik.zq.com +short
+
+http://traefik.zq.com
+```
+
+### dashboard
+
+```shell
+docker pull k8scn/kubernetes-dashboard-amd64:v1.8.3
+docker tag  k8scn/kubernetes-dashboard-amd64:v1.8.3 harbor.zq.com/public/dashboard:v1.8.3
+docker push harbor.zq.com/public/dashboard:v1.8.3
+```
+
+```shell
+docker pull loveone/kubernetes-dashboard-amd64:v1.10.1
+docker tag  loveone/kubernetes-dashboard-amd64:v1.10.1 harbor.zq.com/public/dashboard:v1.10.1
+docker push harbor.zq.com/public/dashboard:v1.10.1
+```
+
+```shell
+mkdir -p /data/k8s-yaml/dashboard
+```
+
+
+
+```shell
+cat >/data/k8s-yaml/dashboard/rbac.yaml <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: kubernetes-dashboard-admin
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubernetes-dashboard-admin
+  namespace: kube-system
+  labels:
+    k8s-app: kubernetes-dashboard
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard-admin
+  namespace: kube-system
+EOF
+```
+
+```shell
+cat >/data/k8s-yaml/dashboard/dp.yaml <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubernetes-dashboard
+  namespace: kube-system
+  labels:
+    k8s-app: kubernetes-dashboard
+    kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kubernetes-dashboard
+  template:
+    metadata:
+      labels:
+        k8s-app: kubernetes-dashboard
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+      priorityClassName: system-cluster-critical
+      containers:
+      - name: kubernetes-dashboard
+        image: harbor.zq.com/public/dashboard:v1.8.3
+        resources:
+          limits:
+            cpu: 100m
+            memory: 300Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+        ports:
+        - containerPort: 8443
+          protocol: TCP
+        args:
+          # PLATFORM-SPECIFIC ARGS HERE
+          - --auto-generate-certificates
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /
+            port: 8443
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      serviceAccountName: kubernetes-dashboard-admin
+      tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Exists"
+EOF
+```
+
+```shell
+cat >/data/k8s-yaml/dashboard/svc.yaml <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes-dashboard
+  namespace: kube-system
+  labels:
+    k8s-app: kubernetes-dashboard
+    kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  selector:
+    k8s-app: kubernetes-dashboard
+  ports:
+  - port: 443
+    targetPort: 8443
+EOF
+```
+
+```shell
+cat >/data/k8s-yaml/dashboard/ingress.yaml <<EOF
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: kubernetes-dashboard
+  namespace: kube-system
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  - host: dashboard.zq.com
+    http:
+      paths:
+      - backend:
+          serviceName: kubernetes-dashboard
+          servicePort: 443
+EOF
+```
+
+```shell
+kubectl create -f http://k8s-yaml.zq.com/dashboard/rbac.yaml
+kubectl create -f http://k8s-yaml.zq.com/dashboard/dp.yaml
+kubectl create -f http://k8s-yaml.zq.com/dashboard/svc.yaml
+kubectl create -f http://k8s-yaml.zq.com/dashboard/ingress.yaml
+```
+
+```shell
+vi /var/named/zq.com.zone
+dashboard          A    10.4.7.10
+# 注意前滚serial编号
+
+systemctl restart bind9.service
+http://dashboard.zq.com
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
