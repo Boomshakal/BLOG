@@ -3899,6 +3899,7 @@ network:
       dhcp4: no
       optional: true
       nameservers:
+        search: [host.com]
         addresses: [10.4.7.11]
   version: 2
 
@@ -6096,6 +6097,7 @@ cfssl gencert -ca=ca.pem \
 #### 前端nginx服务部署证书
 
 ```shell
+# 7-11,7-12
 mkdir /etc/nginx/certs
 scp 10.4.7.200:/opt/certs/dashboard.pem /etc/nginx/certs
 scp 10.4.7.200:/opt/certs/dashboard-key.pem /etc/nginx/certs
@@ -6136,6 +6138,541 @@ EOF
 nginx -t
 nginx -s reload
 ```
+
+
+
+## Dubbo微服务
+
+### 部署ZK集群
+
+#### 二进制安装JDK
+
+```shell
+mkdir /opt/src
+mkdir /usr/java
+cd /opt/src
+
+wget http://k8s-yaml.zq.com/jdk/jdk-8u261-linux-x64.tar.gz
+tar -xf jdk-8u261-linux-x64.tar.gz -C /usr/java/
+ln -s /usr/java/jdk1.8.0_261/ /usr/java/jdk
+```
+```shell
+cat >>/etc/profile <<'EOF'
+#JAVA HOME
+export JAVA_HOME=/usr/java/jdk
+export PATH=$JAVA_HOME/bin:$JAVA_HOME/bin:$PATH
+export CLASSPATH=$CLASSPATH:$JAVA_HOME/lib:$JAVA_HOME/lib/tools.jar
+EOF
+
+source /etc/profile
+
+java -version
+```
+
+#### 二进制安装zk
+
+https://archive.apache.org/dist/zookeeper/
+
+##### 下载zookeeper
+
+```shell
+wget https://archive.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz
+tar -zxf zookeeper-3.4.14.tar.gz -C /opt/
+ln -s /opt/zookeeper-3.4.14/ /opt/zookeeper
+```
+
+##### 创建zk配置文件
+
+```shell
+cat >/opt/zookeeper/conf/zoo.cfg <<'EOF'
+tickTime=2000
+initLimit=10
+syncLimit=5
+dataDir=/data/zookeeper/data
+dataLogDir=/data/zookeeper/logs
+clientPort=2181
+server.1=zk1.zq.com:2888:3888
+server.2=zk2.zq.com:2888:3888
+server.3=zk3.zq.com:2888:3888
+EOF
+```
+
+```shell
+mkdir -p /data/zookeeper/data
+mkdir -p /data/zookeeper/logs
+```
+
+##### 创建集群配置
+
+```shell
+#7-11上
+echo 1 > /data/zookeeper/data/myid
+#7-12上
+echo 2 > /data/zookeeper/data/myid
+#7-21上
+echo 3 > /data/zookeeper/data/myid
+```
+
+##### 修改dns解析
+
+```shell
+vim /var/cache/bind/zq.com.zone
+...
+zk1        A    10.4.7.11
+zk2        A    10.4.7.12
+zk3        A    10.4.7.21
+
+systemctl restart bind9.service
+dig -t A zk1.zq.com  +short
+```
+
+#### 启动zk集群
+
+```shell
+/opt/zookeeper/bin/zkServer.sh start
+ss -ln|grep 2181
+/opt/zookeeper/bin/zkServer.sh status
+
+ZooKeeper JMX enabled by default
+Using config: /opt/zookeeper/bin/../conf/zoo.cfg
+Mode: follower
+
+ZooKeeper JMX enabled by default
+Using config: /opt/zookeeper/bin/../conf/zoo.cfg
+Mode: leader
+```
+
+### 准备java运行底包
+
+#### 拉取原始底包
+
+```shell
+docker pull stanleyws/jre8:8u112
+docker tag stanleyws/jre8:8u112 harbor.zq.com/public/jre:8u112
+docker push harbor.zq.com/public/jre:8u112
+```
+
+#### 制作新底包
+
+```shell
+mkdir -p /data/dockerfile/jre8/
+cd /data/dockerfile/jre8/
+```
+
+#### 制作dockerfile
+
+```shell
+cat >Dockerfile <<'EOF'
+FROM harbor.zq.com/public/jre:8u112
+RUN /bin/cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime &&\
+    echo 'Asia/Shanghai' >/etc/timezone
+ADD config.yml /opt/prom/config.yml
+ADD jmx_javaagent-0.3.1.jar /opt/prom/
+WORKDIR /opt/project_dir
+ADD entrypoint.sh /entrypoint.sh
+CMD ["sh","/entrypoint.sh"]
+EOF
+```
+#### 准备dockerfile需要的文件
+
+```shell
+# 添加config.yml
+cat >config.yml <<'EOF'
+--- 
+rules: 
+ - pattern: '.*'
+EOF
+
+# 下载jmx_javaagent,监控jvm信息
+wget https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.3.1/jmx_prometheus_javaagent-0.3.1.jar -O jmx_javaagent-0.3.1.jar
+
+# 创建entrypoint.sh启动脚本
+cat >entrypoint.sh <<'EOF'
+#!/bin/sh
+M_OPTS="-Duser.timezone=Asia/Shanghai -javaagent:/opt/prom/jmx_javaagent-0.3.1.jar=$(hostname -i):${M_PORT:-"12346"}:/opt/prom/config.yml"
+C_OPTS=${C_OPTS}
+JAR_BALL=${JAR_BALL}
+exec java -jar ${M_OPTS} ${C_OPTS} ${JAR_BALL}
+EOF
+```
+
+#### 构建底包并上传
+
+在harbor中创建名为`base`的公开仓库,用来存放自己自定义的底包
+
+```shell
+docker build . -t harbor.zq.com/base/jre8:8u112
+docker push  harbor.zq.com/base/jre8:8u112
+```
+
+### 交付jenkins到k8s集群
+
+#### 下载官方镜像
+
+```shell
+docker pull jenkins/jenkins:2.190.3
+docker tag jenkins/jenkins:2.190.3 harbor.zq.com/public/jenkins:v2.190.3
+docker push harbor.zq.com/public/jenkins:v2.190.3
+```
+
+#### 修改官方镜像
+
+```shell
+mkdir -p /data/dockerfile/jenkins/
+cd /data/dockerfile/jenkins/
+
+# 创建dockerfile
+cat >/data/dockerfile/jenkins/Dockerfile <<'EOF'
+FROM harbor.zq.com/public/jenkins:v2.190.3
+
+#定义启动jenkins的用户
+USER root
+
+#修改时区为东八区
+RUN /bin/cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime &&\ 
+    echo 'Asia/Shanghai' >/etc/timezone
+
+#加载用户密钥，使用ssh拉取dubbo代码需要
+ADD id_rsa /root/.ssh/id_rsa
+
+#加载运维主机的docker配置文件，里面包含登录harbor仓库的认证信息。
+ADD config.json /root/.docker/config.json
+
+#在jenkins容器内安装docker客户端，docker引擎用的是宿主机的docker引擎
+ADD get-docker.sh /get-docker.sh
+
+# 跳过ssh时候输入yes的交互步骤，并执行安装docker
+RUN echo "    StrictHostKeyChecking no" >/etc/ssh/ssh_config &&\
+    /get-docker.sh  
+EOF
+```
+
+#### 准备dockerfile所需文件
+
+```shell
+ssh-keygen -t rsa -b 2048 -C "362169885@qq.com" -N "" -f /root/.ssh/id_rsa
+cp /root/.ssh/id_rsa /data/dockerfile/jenkins/
+```
+
+> 邮箱请根据自己的邮箱自行修改
+> 创建完成后记得把公钥放到gitee的信任中
+
+##### 获取docker.sh脚本
+
+```shell
+curl -fsSL get.docker.com -o /data/dockerfile/jenkins/get-docker.sh
+chmod u+x /data/dockerfile/jenkins/get-docker.sh
+
+cp /root/.docker/config.json /data/dockerfile/jenkins/
+```
+
+#### harbor中创建私有仓库infra
+
+在harbor中创建名为`infra`的私有仓库
+
+```shell
+cd /data/dockerfile/jenkins/
+docker build . -t harbor.zq.com/infra/jenkins:v2.190.3
+docker push harbor.zq.com/infra/jenkins:v2.190.3
+```
+
+### 准备jenkins运行环境
+
+#### 创建专有namespace
+
+```shell
+# 创建专有namespace
+kubectl create ns infra
+# 创建访问harbor的secret规则
+kubectl create secret docker-registry harbor \
+    --docker-server=harbor.zq.com \
+    --docker-username=admin \
+    --docker-password=Harbor12345 \
+    -n infra
+# 查看结果
+kubectl -n infra get secrets 
+```
+
+> 解释命令：
+> 创建一条secret，资源类型是docker-registry，名字是 harbor
+> 并指定docker仓库地址、访问用户、密码、仓库名
+
+#### 创建NFS共享存储
+
+
+
+```shell
+# 7-200
+apt install nfs-kernel-server -y
+echo '/data/nfs-volume 10.4.7.0/24(rw,no_root_squash)' >>/etc/exports
+mkdir -p /data/nfs-volume/jenkins_home
+systemctl restart nfs-kernel-server
+systemctl status nfs-kernel-server
+showmount -e
+
+# 7-21，7-22
+apt-get install nfs-common
+mkdir nfs-test
+mount hdss7-200:/data/nfs-volume ./nfs-test/
+umount ./nfs-test
+```
+
+#### 创建jenkins资源清单
+
+```shell
+mkdir /data/k8s-yaml/jenkins
+```
+
+##### 创建depeloy清单
+
+```shell
+cat >/data/k8s-yaml/jenkins/dp.yaml <<EOF
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: jenkins
+  namespace: infra
+  labels: 
+    name: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      name: jenkins
+  template:
+    metadata:
+      labels: 
+        app: jenkins 
+        name: jenkins
+    spec:
+      volumes:
+      - name: data
+        nfs: 
+          server: hdss7-200
+          path: /data/nfs-volume/jenkins_home
+      - name: docker
+        hostPath: 
+          path: /run/docker.sock   
+          type: ''
+      containers:
+      - name: jenkins
+        image: harbor.zq.com/infra/jenkins:v2.190.3
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        env:
+        - name: JAVA_OPTS
+          value: -Xmx512m -Xms512m
+        volumeMounts:
+        - name: data
+          mountPath: /var/jenkins_home
+        - name: docker
+          mountPath: /run/docker.sock
+      imagePullSecrets:
+      - name: harbor
+      securityContext: 
+        runAsUser: 0
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: 
+      maxUnavailable: 1
+      maxSurge: 1
+  revisionHistoryLimit: 7
+  progressDeadlineSeconds: 600
+EOF
+```
+
+##### 创建service清单
+
+```shell
+cat >/data/k8s-yaml/jenkins/svc.yaml <<EOF
+kind: Service
+apiVersion: v1
+metadata: 
+  name: jenkins
+  namespace: infra
+spec:
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  selector:
+    app: jenkins
+EOF
+```
+
+##### 创建ingress清单
+
+```shell
+cat >/data/k8s-yaml/jenkins/ingress.yaml <<EOF
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata: 
+  name: jenkins
+  namespace: infra
+spec:
+  rules:
+  - host: jenkins.zq.com
+    http:
+      paths:
+      - path: /
+        backend: 
+          serviceName: jenkins
+          servicePort: 80
+EOF
+```
+
+#### 部署jenkins
+
+```shell
+kubectl create -f http://k8s-yaml.zq.com/jenkins/dp.yaml
+kubectl create -f http://k8s-yaml.zq.com/jenkins/svc.yaml
+kubectl create -f http://k8s-yaml.zq.com/jenkins/ingress.yaml
+
+kubectl get pod -n infra
+```
+
+##### 验证jenkins容器状态
+
+```shell
+docker exec -it 8ff92f08e3aa /bin/bash
+# 查看用户
+whoami
+# 查看时区
+date
+# 查看是否能用宿主机的docker引擎
+docker ps 
+# 看是否能免密访问gitee
+ssh -i /root/.ssh/id_rsa -T git@gitee.com
+# 是否能访问是否harbor仓库
+docker login harbor.zq.com
+```
+
+##### 查看持久化结果和密码
+
+```shell
+ll /data/nfs-volume/jenkins_home
+cat /data/nfs-volume/jenkins_home/secrets/initialAdminPassword
+
+# 替换jenkins插件源
+cd /data/nfs-volume/jenkins_home/updates
+sed -i 's#http:\/\/updates.jenkins-ci.org\/download#https:\/\/mirrors.tuna.tsinghua.edu.cn\/jenkins#g' default.json
+sed -i 's#http:\/\/www.google.com#https:\/\/www.baidu.com#g' default.json
+```
+
+#### 解析jenkins
+
+```shell
+vim /var/cache/bind/zq.com.zone
+...
+jenkins         A    10.4.7.10
+
+systemctl restart bind9.service
+http://jenkins.zq.com
+```
+
+#### 初始化jenkins
+
+浏览器访问`http://jenkins.zq.com`,使用前面的密码进入jenkins
+进入后操作:
+
+1. 跳过安装自动安装插件的步骤
+2. 在`manage jenkins`->`Configure Global Security`菜单中设置
+   2.1 允许匿名读：勾选`allow anonymous read access`
+   2.2 允许跨域：勾掉`prevent cross site request forgery exploits`
+3. 搜索并安装蓝海插件`blue ocean`
+4. 设置用户名密码为`admin:admin123`
+5. Jenkins的更新网站 替换http://mirror.xmission.com/jenkins/updates/update-center.json 来进行更新
+
+#### 给jenkins配置maven环境
+
+```shell
+wget https://archive.apache.org/dist/maven/maven-3/3.6.1/binaries/apache-maven-3.6.1-bin.tar.gz
+tar -zxf apache-maven-3.6.1-bin.tar.gz -C /data/nfs-volume/jenkins_home/
+mv /data/nfs-volume/jenkins_home/{apache-,}maven-3.6.1
+cd /data/nfs-volume/jenkins_home/maven-3.6.1
+```
+
+```shell
+cat >conf/settings.xml  <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd"> 
+  <pluginGroups>
+  </pluginGroups>
+  <proxies>
+  </proxies>
+  <servers>
+  </servers>
+  <mirrors>
+	<mirror>
+	  <id>nexus-aliyun</id>
+	  <mirrorOf>*</mirrorOf>
+	  <name>Nexus aliyun</name>
+	  <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+	</mirror>
+  </mirrors>
+  <profiles>
+  </profiles>
+</settings>
+EOF
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
