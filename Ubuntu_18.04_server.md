@@ -4216,7 +4216,7 @@ useradd -s /sbin/nologin -M etcd
 wget https://github.com/etcd-io/etcd/archive/v3.3.25.tar.gz
 tar xf etcd-v3.3.25-linux-amd64.tar.gz -C /opt/
 cd /opt/
-mv etcd-v3.1.20-linux-amd64/ etcd-v3.3.25
+mv etcd-v3.3.25-linux-amd64/ etcd-v3.3.25
 ln -s /opt/etcd-v3.3.25/ /opt/etcd
 ```
 
@@ -6619,6 +6619,115 @@ cat >conf/settings.xml  <<'EOF'
 </settings>
 EOF
 ```
+
+### 交付dubbo-service到k8s
+
+#### 准备资源清单
+
+```shell
+mkdir /data/k8s-yaml/dubbo-server/
+cd /data/k8s-yaml/dubbo-server
+```
+
+##### 创建depeloy清单
+
+```shell
+cat >dp.yaml <<EOF
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: dubbo-demo-service
+  namespace: app
+  labels: 
+    name: dubbo-demo-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      name: dubbo-demo-service
+  template:
+    metadata:
+      labels: 
+        app: dubbo-demo-service
+        name: dubbo-demo-service
+    spec:
+      containers:
+      - name: dubbo-demo-service
+        image: harbor.zq.com/app/dubbo-demo-service:master_200930_1700
+        ports:
+        - containerPort: 20880
+          protocol: TCP
+        env:
+        - name: JAR_BALL
+          value: dubbo-server.jar
+        imagePullPolicy: IfNotPresent
+      imagePullSecrets:
+      - name: harbor
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      securityContext: 
+        runAsUser: 0
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: 
+      maxUnavailable: 1
+      maxSurge: 1
+  revisionHistoryLimit: 7
+  progressDeadlineSeconds: 600
+EOF
+```
+
+> 需要根据自己构建镜像的tag来修改image
+> dubbo的server服务,只向zk注册并通过zk与dobbo的web交互,不需要对外提供服务
+> 因此不需要service资源和ingress资源
+
+##### 创建app名称空间
+
+```shell
+kubectl create namespace app
+```
+
+##### 创建secret资源
+
+```shell
+kubectl -n app \
+    create secret docker-registry harbor \
+    --docker-server=harbor.zq.com \
+    --docker-username=admin \
+    --docker-password=Harbor12345
+```
+
+##### 应用资源清单
+
+```shell
+kubectl apply -f http://k8s-yaml.zq.com/dubbo-server/dp.yaml
+```
+
+**3分钟后检查启动情况**
+
+```shell
+kubectl -n app get pod
+kubectl -n app logs dubbo-demo-service-56df6957dc-d99n4 --tail=10
+```
+
+**到zk服务器检查是否有服务注册**
+
+```shell
+sh /opt/zookeeper/bin/zkCli.sh
+[zk: localhost:2181(CONNECTED) 0] ls /
+[dubbo, zookeeper]
+[zk: localhost:2181(CONNECTED) 1] ls /dubbo
+[com.od.dubbotest.api.HelloService]
+```
+
+
+
+
+
+
+
+
 
 
 
