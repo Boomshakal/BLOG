@@ -3645,7 +3645,7 @@ kubectl edit horizontalpodautoscalers nginx
 
 ```shell
 # server.yaml
-
+cat > inspect_svc.yaml <<EOF
 apiVersion: v1
 kind: Service
 metadata:
@@ -3659,6 +3659,7 @@ spec:
   selector:
     app: inspect-server
   type: NodePort
+EOF
 ```
 
 ```shell
@@ -3724,7 +3725,7 @@ kubeadm reset
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.3/aio/deploy/recommended.yaml
 
 # 后台开启proxy模式
-nohup kubectl proxy --address=192.168.1.157 --disable-filter=true &
+nohup kubectl proxy --address=10.4.7.21 --disable-filter=true &
 
 # 修改为type:NodePort
 kubectl -n kubernetes-dashboard edit service kubernetes-dashboard
