@@ -97,59 +97,6 @@ https://github.com/coreos/flannel
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 ```
 
-## kubernetes-dashboard
-
-[kubernetes](https://github.com/kubernetes)/**[dashboard](https://github.com/kubernetes/dashboard)**
-
-```shell
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.4/aio/deploy/recommended.yaml
-```
-
-```shell
-# 修改为type:NodePort
-kubectl -n kubernetes-dashboard edit service kubernetes-dashboard
-spec:
-  type: NodePort
-  ports:
-	  ...
-      nodePort: 30001
-```
-
-```shell
-# 后台开启proxy模式
-nohup kubectl proxy --address=10.4.7.21 --disable-filter=true &
-```
-
-### rbac.yaml
-
-```shell
-cat >rbac.yaml <<EOF
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: admin-user
-  namespace: kube-system
-
----
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
-metadata:
-  name: admin-user
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: admin-user
-  namespace: kube-system
-EOF
-```
-
-```shell
-kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
-```
-
 ## 单节点k8s,默认pod不被调度在master节点
 
 ```shell
@@ -313,6 +260,124 @@ kubectl apply -f svc.yaml
 kubectl apply -f ingress.yaml
 ```
 
+
+
+## kubernetes-dashboard
+
+[kubernetes](https://github.com/kubernetes)/**[dashboard](https://github.com/kubernetes/dashboard)**
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.4/aio/deploy/recommended.yaml
+```
+
+```shell
+# 修改为type:NodePort
+kubectl -n kubernetes-dashboard edit service kubernetes-dashboard
+spec:
+  type: NodePort
+  ports:
+	  ...
+      nodePort: 30001
+```
+
+```shell
+# 后台开启proxy模式
+nohup kubectl proxy --address=10.4.7.21 --disable-filter=true &
+```
+
+### rbac.yaml
+
+```shell
+cat >rbac.yaml <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kube-system
+EOF
+```
+
+```shell
+kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
+```
+
+### ingress.yaml
+
+```shell
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  - host: dashboard.li.com
+    http:
+      paths:
+      - backend:
+          serviceName: kubernetes-dashboard
+          servicePort: 443
+```
+
+### 复制证书
+
+```shell
+mkdir /etc/nginx/certs
+cp /etc/kubernetes/pki/ca.* /etc/nginx/certs
+mv ca.crt dashboard.crt
+mv ca.key dashboard-key.key
+```
+
+### **创建nginx配置**
+
+```shell
+cat >/etc/nginx/conf.d/dashboard.li.com.conf <<'EOF'
+server {
+    listen       80;
+    server_name  dashboard.li.com;
+
+    rewrite ^(.*)$ https://${server_name}$1 permanent;
+}
+server {
+    listen       443 ssl;
+    server_name  dashboard.li.com;
+
+    ssl_certificate     "certs/dashboard.crt";
+    ssl_certificate_key "certs/dashboard-key.key";
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout  10m;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        proxy_pass http://default_backend_traefik;
+        proxy_set_header Host       $http_host;
+        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
+    }
+}
+EOF
+
+https://dashboard.li.com
+```
+
+
+
 ## [k8s 证书过期时间调整](https://www.cnblogs.com/lixinliang/p/12217328.html)
 
 ```shell
@@ -389,4 +454,238 @@ scp -qpr master01:/usr/bin/kubeadm master02:/usr/bin/kubeadm
 systemctl restart kubelet
 kubectl get pod   -n kube-system
 ```
+
+
+
+# wordpress
+
+### mysql-pv.yaml
+
+```shell
+cat > mysql-pv.yaml <<EOF 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mysql
+  labels:
+    type: pv-mysql
+spec:
+  capacity:
+    storage: 10Gi 
+  accessModes:
+    - ReadWriteMany 
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    path: "/data/mysql"
+    server: localhost
+    readOnly: false
+EOF
+```
+
+### mysql-pvc.yaml
+
+```shell
+cat > mysql-pvc.yaml <<EOF 
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-mysql
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+```
+
+### mysql-dp.yaml
+
+```shell
+cat > mtsql-dp.yaml << EOF
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: mysql
+  template:
+    metadata:
+      labels:
+        k8s-app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:5.7
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: nfs-vol
+          mountPath: /var/lib/mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "somewordpress"
+        - name: MYSQL_DATABASE
+          value: "wordpress"
+        - name: MYSQL_USER
+          value: "wordpress"
+        - name: MYSQL_PASSWORD
+          value: "wordpress"
+      volumes:
+      - name: nfs-vol
+        persistentVolumeClaim:
+          claimName: pvc-mysql
+EOF
+```
+
+### mysql-svc.yaml
+
+```shell
+cat > mysql-svc.yaml <<EOF 
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: mysql
+EOF
+```
+
+
+
+### wp-pv.yaml
+
+```shell
+cat > wp-pv.yaml << EOF 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-wordpress
+  labels:
+    type: pv-wordpress
+spec:
+  capacity:
+    storage: 10Gi 
+  accessModes:
+    - ReadWriteMany 
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    path: "/data/wordpress"
+    server: localhost
+    readOnly: false
+EOF
+```
+
+
+
+### wp-pvc.yaml
+
+```shell
+cat > wp-pvc.yaml <<EOF
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-wordpress
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+```
+
+### wp-dp.yaml
+
+```shell
+cat > wp-dp.yaml <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      containers:
+      - name: wordpress
+        image: docker.io/wordpress:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nfs-vol
+          mountPath: /var/www/html
+        env:
+        - name: WORDPRESS_DB_HOST
+          value: '10.244.0.21'
+        - name: WORDPRESS_DB_USER
+          value: 'wordpress'
+        - name: WORDPRESS_DB_PASSWORD
+          value: 'wordpress'
+      volumes:
+      - name: nfs-vol
+        persistentVolumeClaim:
+          claimName: pvc-wordpress
+EOF
+```
+
+### wp-svc.yaml
+
+```shell
+cat > wp-svc.yaml <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-svc
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: wordpress
+EOF
+```
+
+### wp-ingress.yaml
+
+```shell
+cat > wp-ingress.yaml <<EOF
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: wordpress-dashboard
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  - host: wordpress.li.com
+    http:
+      paths:
+      - backend:
+          serviceName: wordpress-svc
+          servicePort: 80
+EOF
+
+http://wordpress.li.com/
+```
+
+
+
+
+
+
+
+
+
+
 
