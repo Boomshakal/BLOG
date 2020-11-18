@@ -502,7 +502,7 @@ EOF
 ### mysql-dp.yaml
 
 ```shell
-cat > mtsql-dp.yaml << EOF
+cat > mysql-dp.yaml << EOF
 kind: Deployment
 metadata:
   name: mysql
