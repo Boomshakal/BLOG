@@ -340,6 +340,7 @@ spec:
 ```shell
 mkdir /etc/nginx/certs
 cp /etc/kubernetes/pki/ca.* /etc/nginx/certs
+cd /etc/nginx/certs
 mv ca.crt dashboard.crt
 mv ca.key dashboard-key.key
 ```
