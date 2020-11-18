@@ -684,10 +684,10 @@ http://wordpress.li.com/
 
 ## plex-server
 
-
+### pms-dp.yaml
 
 ```shell
-root@k8s-master:~/plex-server# cat pms-dp.yaml 
+cat> pms-dp.yaml <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -732,10 +732,13 @@ spec:
         hostPath:
           path: /data/pms/data
           type: Directory
+EOF
 ```
 
+### pms-svc.yaml 
+
 ```shell
-root@k8s-master:~/plex-server#  cat pms-svc.yaml 
+cat> pms-svc.yaml <<EOF
 apiVersion: v1
 kind: Service
 metadata:
@@ -746,10 +749,13 @@ spec:
       targetPort: 32400
   selector:
     app: pms
+EOF
 ```
 
+### pms-ingress.yaml 
+
 ```shell
-root@k8s-master:~/plex-server# cat pms-ingress.yaml 
+cat> pms-ingress.yaml <<EOF
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -764,6 +770,7 @@ spec:
       - backend:
           serviceName: plex-svc
           servicePort: 32400
+EOF
 ```
 
 
