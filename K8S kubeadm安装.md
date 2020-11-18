@@ -457,7 +457,7 @@ kubectl get pod   -n kube-system
 
 
 
-# wordpress
+## wordpress
 
 ### mysql-pv.yaml
 
@@ -678,6 +678,96 @@ EOF
 
 http://wordpress.li.com/
 ```
+
+
+
+## plex-server
+
+
+
+```shell
+root@k8s-master:~/plex-server# cat pms-dp.yaml 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pms
+  template:
+    metadata:
+      labels:
+        app: pms
+    spec:
+      containers:
+      - name: pms
+        image: plexinc/pms-docker:latest
+        ports:
+        - containerPort: 32400
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: transcode
+          mountPath: /transcode
+        - name: data
+          mountPath: /data
+        env:
+        - name: TZ
+          value: 'Asia/Shanghai'
+        - name: PLEX_CLAIM
+          value: 'claim-jzkr6gL5YR26Dy8d358k'
+      volumes:
+      - name: config
+        hostPath:
+          path: /data/pms/config
+          type: Directory
+      - name: transcode
+        hostPath:
+          path: /data/pms/transcode
+          type: Directory
+      - name: data
+        hostPath:
+          path: /data/pms/data
+          type: Directory
+```
+
+```shell
+root@k8s-master:~/plex-server#  cat pms-svc.yaml 
+apiVersion: v1
+kind: Service
+metadata:
+  name: plex-svc
+spec:
+  ports:
+    - port: 32400
+      targetPort: 32400
+  selector:
+    app: pms
+```
+
+```shell
+root@k8s-master:~/plex-server# cat pms-ingress.yaml 
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: plex-ingress
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  - host: plex.li.com
+    http:
+      paths:
+      - backend:
+          serviceName: plex-svc
+          servicePort: 32400
+```
+
+
+
+
 
 
 
