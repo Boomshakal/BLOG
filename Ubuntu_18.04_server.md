@@ -1848,6 +1848,12 @@ nginx(负载均衡)+python(virtualenv)+uwsgi(python应用服务器，启动10个
 yum install gcc patch libffi-devel python-devel  zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gdbm-devel db4-devel libpcap-devel xz-devel openssl openssl-devel -y
 ```
 
+```shell
+apt install gcc openssl libssl-dev libpcre3 libpcre3-dev zlib1g-dev make
+```
+
+
+
 2. Nginx安装
 
 ```shell
@@ -1857,6 +1863,7 @@ wget -c https://nginx.org/download/nginx-1.12.0.tar.gz
 tar -zxvf nginx-1.12.0.tar.gz
 # 3.配置，编译安装  开启nginx状态监测功能
 ./configure --prefix=/opt/nginx1-12/ --with-http_ssl_module --with-http_stub_status_module 
+### --with-stream 反向代理TCP
 make && make install 
 # 4.启动nginx，进入sbin目录,找到nginx启动命令
 cd sbin
