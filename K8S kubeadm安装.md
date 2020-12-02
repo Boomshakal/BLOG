@@ -173,6 +173,9 @@ metadata:
   labels:
     k8s-app: traefik-ingress
 spec:
+  selector:
+    matchLabels:
+      name: traefik-ingress
   template:
     metadata:
       labels:
@@ -243,7 +246,7 @@ metadata:
     kubernetes.io/ingress.class: traefik
 spec:
   rules:
-  - host: traefik.ikahe.com
+  - host: traefik.li.com
     http:
       paths:
       - path: /
@@ -348,6 +351,23 @@ mv ca.key dashboard-key.key
 ### **创建nginx配置**
 
 ```shell
+cat >/etc/nginx/conf.d/li.com.conf <<'EOF'
+upstream default_backend_traefik {
+    server 10.4.7.21:81    max_fails=3 fail_timeout=10s;
+    server 10.4.7.22:81    max_fails=3 fail_timeout=10s;
+}
+server {
+    server_name *.li.com;
+  
+    location / {
+        proxy_pass http://default_backend_traefik;
+        proxy_set_header Host       $http_host;
+        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
+    }
+}
+EOF
+
+
 cat >/etc/nginx/conf.d/dashboard.li.com.conf <<'EOF'
 server {
     listen       80;
@@ -396,15 +416,17 @@ source /etc/profile
 go version
 
 # 下载kubernetes源码包
-git clone https://github.com/kubernetes/kubernetes.git
+git clone https://gitee.com/mirrors/Kubernetes.git
 kubeadm version
 git checkout -b remotes/origin/release-1.19.3 v1.19.3
 
 # 修改 Kubeadm 源码包更新证书策略
-cd kubernetes
-vim cmd/kubeadm/app/util/pkiutil/pki_helpers.go
-const duration36500d = time.Hour * 24 * 365 * 100
-NotAfter: time.Now().Add(duration36500d).UTC()
+cd Kubernetes
+vim ./staging/src/k8s.io/client-go/util/cert/cert.go
+96         maxAge := time.Hour * 24 * 365 * 10         // one year self-signed certs
+
+vim ./cmd/kubeadm/app/constants/constants.go
+47         CertificateValidity = time.Hour * 24 * 365 * 10
 
 # 只编译kubeadm
 apt install make
@@ -424,7 +446,7 @@ cp -r /etc/kubernetes/pki /etc/kubernetes/pki.old
 cd /etc/kubernetes/pki
 kubeadm alpha certs renew all # 有提示可忽略 
 # 查看证书有限期 100年
-openssl x509 -in apiserver.crt -text -noout
+openssl x509 -in apiserver.crt   -noout -text  |grep Not
 Validity
             Not Before: Oct 19 00:32:46 2020 GMT
             Not After : Sep 25 06:25:28 2120 GMT
