@@ -280,7 +280,7 @@ class BookSerializer(serializers.ModelSerializer):
     # 多对多字段需要自己手动获取数据
     def get_authors_list(self,book_obj):
         authors =list()
-        for author in bokk_obj.authors.all():
+        for author in book_obj.authors.all():
         	authors.append(author.name)
         return authors
     class Meta:

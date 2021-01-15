@@ -331,7 +331,22 @@ sudo update-initramfs -u
 
 
 
+# mount 扩展 /dev/mapper/ubuntu--vg-ubuntu--lv空间
 
+```shell
+# 查看磁盘空间
+df -h
+# 查看vg
+vgdisplay
+
+lvextend -L 120G /dev/mapper/ubuntu--vg-ubuntu--lv     //增大至120G
+lvextend -L +20G /dev/mapper/ubuntu--vg-ubuntu--lv     //增加20G
+lvreduce -L 50G /dev/mapper/ubuntu--vg-ubuntu--lv      //减小至50G
+lvreduce -L -8G /dev/mapper/ubuntu--vg-ubuntu--lv      //减小8G
+lvresize -L  30G /dev/mapper/ubuntu--vg-ubuntu--lv     //调整为30G
+
+resize2fs /dev/mapper/ubuntu--vg-ubuntu--lv            //执行调整
+```
 
 
 
@@ -2952,7 +2967,7 @@ docker run --name mynginx -d -p 80:80  \
 ## 搭建Mysql
 
 ```shell
-docker pull mysql
+docker pull mysql:5.7
 docker run -p 3306:3306 --name mysql -e MYSQL_ROOT_PASSWORD=root -d mysql
 
 # 建立目录映射
@@ -2961,7 +2976,7 @@ docker run -p 3306:3306 --name mysql \
 -v /usr/local/docker/mysql/logs:/var/log/mysql \
 -v /usr/local/docker/mysql/data:/var/lib/mysql \
 -e MYSQL_ROOT_PASSWORD=root \
--d mysql
+-d mysql:5.7
 ```
 
 ## 搭建Redis
@@ -2978,7 +2993,7 @@ mkdir redis&&cd redis
 # 创建配置文件，并将官网redis.conf文件配置复制下来进行修改
 touch redis.conf
 # 创建数据存储目录data
-mkidr data
+mkdir data
 ```
 
 [redis.conf](http://download.redis.io/redis-stable/redis.conf)官网下载地址
@@ -3011,14 +3026,23 @@ docker run -p 6379:6379 --name redis \
 docker pull mongo
 
 # --auth 需要密码才能访问容器服务
-docker run -itd --name mongo -p 27017:27017 mongo --auth
+docker run -d --name mongo -p 27017:27017 mongo --auth
 
 docker exec -it mongo mongo admin
 >  db.createUser({ user:'admin',pwd:'123456',roles:[ { role:'userAdminAnyDatabase', db: 'admin'}]});
 > db.auth('admin', '123456')
 ```
 
+## 搭建PG
 
+```shell
+docker pull postgres
+
+docker run -d \
+-e POSTGRES_USER=root -e POSTGRES_PASSWORD=root \
+--name postgres \
+-p 5432:5432 postgres:latest
+```
 
 
 

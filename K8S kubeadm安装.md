@@ -527,6 +527,7 @@ EOF
 ```shell
 cat > mysql-dp.yaml << EOF
 kind: Deployment
+apiVersion: v1
 metadata:
   name: mysql
 spec:
@@ -705,6 +706,9 @@ http://wordpress.li.com/
 
 
 ## plex-server
+
+`<claimToken>`这里可以到plex获取
+地址：https://www.plex.tv/claim
 
 ### pms-dp.yaml
 
