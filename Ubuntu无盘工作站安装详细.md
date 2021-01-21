@@ -180,6 +180,84 @@ root@ubuntu:/var/lib/tftpboot/pxelinux.cfg#
 
 
 
+# Windows 无盘工作站
+
+## 服务端三大服务
+
+### iSCSI
+
+```shell
+apt-get install tgt -y
+systemctl status tgt
+
+vim /etc/tgt/conf.d/iscsi.conf
+<target iqn.2021-02.example.com:lun1>
+     backing-store /dev/sdb
+     # initiator-address 192.168.1.20
+     # incominguser iscsi-user password
+     # outgoinguser iscsi-target secretpass
+</target>
+
+systemctl restart tgt
+tgtadm --mode target --op show
+```
+
+### TFTP
+
+```shell
+apt-get install tftpd-hpa
+
+vim /etc/default/tftpd-hpa
+# /etc/default/tftpd-hpa
+TFTP_USERNAME="tftp"
+TFTP_DIRECTORY="/var/lib/ipxe"
+TFTP_ADDRESS=":69"
+TFTP_OPTIONS="-l -s"
+
+/etc/init.d/tftpd-hpa start
+netstat -pna|grep tftp
+
+链接：https://pan.baidu.com/s/1hsLvP1LJkxV-FwLDBECelA 
+提取码：p2tb 
+
+
+# 修改为对应的iSCSI存储器
+:WINDOWS
+  sanboot iscsi:192.168.150.143:::1:iqn.win10:win10
+
+:install
+  sanhook iscsi:192.168.150.143:::1:iqn.win10:win10
+  exit
+
+```
+
+### DHCP
+
+```shell
+apt-get install isc-dhcp-server
+
+vim /etc/dhcp/dhcpd.conf
+allow booting;
+allow bootp;
+
+subnet 10.4.7.0 netmask 255.255.255.0 {
+  range 10.4.7.50 10.4.7.80;
+  option broadcast-address 10.4.7.255;
+  option routers 10.4.7.2;
+  option domain-name-servers 10.4.7.2;
+  filename "/grldr";
+}
+
+sudo service isc-dhcp-server restart
+netstat -aunp|grep dhcp
+```
+
+
+
+
+
+
+
 
 
 
