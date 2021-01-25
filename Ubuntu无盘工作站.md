@@ -1,4 +1,4 @@
-# Ubuntu无盘工作站安装详细步骤
+# Ubuntu无盘工作站
 
 ## 服务器端三大服务
 
@@ -190,9 +190,12 @@ root@ubuntu:/var/lib/tftpboot/pxelinux.cfg#
 apt-get install tgt -y
 systemctl status tgt
 
+mkdir /var/lib/iscsi_disks
+dd if=/dev/zero of=/var/lib/iscsi_disks/win10.img count=0 bs=1 seek=40G
+
 vim /etc/tgt/conf.d/iscsi.conf
-<target iqn.2021-02.example.com:lun1>
-     backing-store /dev/sdb
+<target iqn.2020-12.win10:lun1>
+     backing-store /var/lib/iscsi_disks/win10.img
      # initiator-address 192.168.1.20
      # incominguser iscsi-user password
      # outgoinguser iscsi-target secretpass
@@ -223,10 +226,10 @@ netstat -pna|grep tftp
 
 # 修改为对应的iSCSI存储器
 :WINDOWS
-  sanboot iscsi:192.168.150.143:::1:iqn.win10:win10
+  sanboot iscsi:10.4.7.51:::1:iqn.2020-12.win10:lun1
 
 :install
-  sanhook iscsi:192.168.150.143:::1:iqn.win10:win10
+  sanhook iscsi:10.4.7.51:::1:iqn.2020-12.win10:lun1
   exit
 
 ```
