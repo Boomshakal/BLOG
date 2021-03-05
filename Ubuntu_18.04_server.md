@@ -2641,7 +2641,7 @@ pip install fdfs_client-py-master.zip
 1. 在任意环境中，下载最新的vlmcsd releases版本，[下载地址](https://github.com/Wind4/vlmcsd/releases)。如在linux中，可以使用wget下载
 
 ```shell
-wget https://github.com/Wind4/vlmcsd/releases/download/svn1111/binaries.tar.gz
+wget https://github.com/Wind4/vlmcsd/releases/download/svn1113/binaries.tar.gz
 ```
 
 2. 解压安装包
@@ -2654,7 +2654,8 @@ tar -zxvf binaries.tar.gz
 
 ```shell
 cd binaries/Linux/intel/static/
-./vlmcsd-x64-musl-static
+chmod u+x vlmcsdmulti-x64-musl-static
+./vlmcsd-x64-musl-static vlmcsd
 
 # 查看1688端口
 netstat -lnp|grep 1688
@@ -3556,7 +3557,7 @@ https://llovewxm1314.blog.csdn.net/article/details/108458197
 vim /etc/kubernetes/manifests/kube-controller-manager.yaml
 ...
  27   #  - --port=0
-vim /etc/kubernetes/manifests/kube-scheduler.yam
+vim /etc/kubernetes/manifests/kube-scheduler.yaml
 ...
  19   #  - --port=0
  
