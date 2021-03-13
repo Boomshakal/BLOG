@@ -3147,6 +3147,14 @@ docker start test_es
 docker rm test_es
 ```
 
+## 搭建RabbitMQ
+
+```shell
+docker run -dit --name RabbitMQ -e RABBITMQ_DEFAULT_USER=admin -e RABBITMQ_DEFAULT_PASS=admin -p 15672:15672 -p 5672:5672 rabbitmq:management 
+```
+
+
+
 ## 搭建Plex Media Player
 
 [PLEX_CLAIM获取地址](https://www.plex.tv/claim)
