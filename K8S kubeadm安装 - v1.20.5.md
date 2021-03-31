@@ -385,7 +385,7 @@ metadata:
   name: traefik-dashboard-route
 spec:
   entryPoints:
-    - web
+    - websecure
   routes:
   # 这里设置你的域名
     - match: Host(`traefik.li.com`)
@@ -393,9 +393,15 @@ spec:
       services:
         - name: traefik
           port: 8080
+  tls:
+    secretName: https
 ```
 
 ```shell
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=who.qikqiak.com"
+
+kubectl create secret tls https --cert=tls.crt --key=tls.key -n kube-system
+
 kubectl apply -f traefik-crd.yaml
 kubectl apply -f traefik-rbac.yaml -n kube-system
 kubectl apply -f traefik-config.yaml -n kube-system
@@ -476,6 +482,26 @@ spec:
       - backend:
           serviceName: kubernetes-dashboard
           servicePort: 443
+          
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: kubernetes-dashboard-route
+  namespace: kubernetes-dashboard
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  # 这里设置你的域名
+    - match: Host(`dashboard.li.com`)
+      kind: Rule
+      services:
+        - name: kubernetes-dashboard
+          port: 443
+  tls:
+    secretName: https
 ```
 
 ### 复制证书
@@ -493,8 +519,8 @@ mv ca.key dashboard-key.key
 ```shell
 cat >/etc/nginx/conf.d/li.com.conf <<'EOF'
 upstream default_backend_traefik {
-    server 10.4.7.21:81    max_fails=3 fail_timeout=10s;
-    server 10.4.7.22:81    max_fails=3 fail_timeout=10s;
+    server 10.4.7.21:80    max_fails=3 fail_timeout=10s;
+    server 10.4.7.22:80    max_fails=3 fail_timeout=10s;
 }
 server {
     server_name *.li.com;
