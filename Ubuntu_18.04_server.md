@@ -3286,6 +3286,24 @@ harbor_admin_password = 123456
 
 
 
+## 搭建KMS
+
+```shell
+docker search kms-server
+docker pull luodaoyi/kms-server
+docker run -d --name KMS -p 1688:1688 luodaoyi/kms-server:latest
+
+netstat -lnp|grep 1688
+ss -tnl|grep 1688
+ps aux | grep vlmcsd
+```
+
+
+
+
+
+
+
 
 
 
@@ -3578,7 +3596,26 @@ controller-manager   Healthy   ok
 etcd-0               Healthy   {"health":"true"}
 ```
 
+## k8s --nodePort、port、targetPort、containerPort
 
+```shell
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  type: NodePort            // 配置NodePort，外部流量可访问k8s中的服务
+  ports:
+  - port: 30080             // 服务访问端口
+    targetPort: 80          // pod控制器中定义的端口
+    nodePort: 30001         // NodePort
+  selector:
+    name: nginx-pod
+```
+
+
+
+port和nodePort都是service的端口，前者暴露给k8s集群内部服务访问，后者暴露给k8s集群外部流量访问。从这两个端口到来的数据都需要经过反向代理kube-proxy，流入后端pod的targetPort上，最后到达pod内容器的containerPort
 
 ## Pod.yaml
 

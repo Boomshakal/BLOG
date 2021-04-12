@@ -385,7 +385,7 @@ metadata:
   name: traefik-dashboard-route
 spec:
   entryPoints:
-    - websecure
+    - web
   routes:
   # 这里设置你的域名
     - match: Host(`traefik.li.com`)
@@ -393,8 +393,6 @@ spec:
       services:
         - name: traefik
           port: 8080
-  tls:
-    secretName: https
 ```
 
 ```shell
@@ -467,22 +465,6 @@ kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | gre
 ### ingress.yaml
 
 ```shell
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: kubernetes-dashboard
-  namespace: kubernetes-dashboard
-  annotations:
-    kubernetes.io/ingress.class: traefik
-spec:
-  rules:
-  - host: dashboard.li.com
-    http:
-      paths:
-      - backend:
-          serviceName: kubernetes-dashboard
-          servicePort: 443
-          
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
