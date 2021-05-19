@@ -218,7 +218,7 @@ data:
 ### Set Lable
 
 ```shell
-kubectl label nodes k8s-master IngressProxy=true
+kubectl label nodes k3s-master IngressProxy=true
 kubectl get nodes --show-labels
 ```
 
@@ -354,9 +354,10 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: admin-user
-  namespace: kubernetes-dashboard
+  namespace: kube-system
+
 ---
-apiVersion: rbac.authorization.k8s.io/v1
+apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
   name: admin-user
@@ -365,13 +366,13 @@ roleRef:
   kind: ClusterRole
   name: cluster-admin
 subjects:
-  - kind: ServiceAccount
-    name: admin-user
-    namespace: kubernetes-dashboard
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kube-system
 ```
 
 ```shell
-sudo k3s kubectl -n kubernetes-dashboard describe secret admin-user-token | grep '^token'
+sudo k3s kubectl -n kube-system describe secret admin-user-token | grep '^token'
 ```
 
 ### ingress.yaml
