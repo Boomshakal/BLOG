@@ -594,13 +594,155 @@ EOF
 
 
 
+## KubeVirt
+
+### 准备工作
+
+```shell
+apt install -y qemu-kvm libvirt-bin bridge-utils virt-manager
+virt-host-validate qemu
+```
+
+### 安装KubeVirt
+
+```shell
+export VERSION=$(curl -s https://api.github.com/repos/kubevirt/kubevirt/releases | grep tag_name | grep -v -- '-rc' | head -1 | awk -F': ' '{print $2}' | sed 's/,//' | xargs)
+kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/kubevirt-operator.yaml
+kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/kubevirt-cr.yaml
+
+kubectl -n kubevirt get pod
+```
+
+### 部署CDI
+
+```shell
+export VERSION=$(curl -s https://github.com/kubevirt/containerized-data-importer/releases/latest | grep -o "v[0-9]\.[0-9]*\.[0-9]*")
+kubectl create -f https://github.com/kubevirt/containerized-data-importer/releases/download/$VERSION/cdi-operator.yaml
+kubectl create -f https://github.com/kubevirt/containerized-data-importer/releases/download/$VERSION/cdi-cr.yaml
+```
+
+### 安装Krew
+
+```shell
+(
+  set -x; cd "$(mktemp -d)" &&
+  OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+  ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.tar.gz" &&
+  tar zxvf krew.tar.gz &&
+  KREW=./krew-"${OS}_${ARCH}" &&
+  "$KREW" install krew
+)
+```
+
+```shell
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+```
+
+### 安装virt插件
+
+```shell
+kubectl krew install virt
+```
+
+### 上传镜像
+
+```shell
+kubectl virt image-upload \
+  --image-path='Windows10.iso' \
+  --storage-class nfs-client \
+  --pvc-name=iso-win10 \
+  --pvc-size=8G \
+  --uploadproxy-url=https://10.43.114.226 \
+  --insecure \
+  --wait-secs=240
+```
+
+- **--image-path** : 操作系统镜像地址。
+- **--pvc-name** : 指定存储操作系统镜像的 PVC，这个 PVC 不需要提前准备好，镜像上传过程中会自动创建。
+- **--pvc-size** : PVC 大小，根据操作系统镜像大小来设定，一般略大一个 G 就行。
+- **--uploadproxy-url** : cdi-uploadproxy 的 Service IP，可以通过命令 `kubectl -n cdi get svc -l cdi.kubevirt.io=cdi-uploadproxy` 来查看。
+
+### 增加 hostDisk 支持
+
+```shell
+cat kubevet-config.yaml
+apiVersion: v1
+data:
+  feature-gates: LiveMigration,DataVolumes,HostDisk
+kind: ConfigMap
+metadata:
+  labels:
+    kubevirt.io: ""
+  name: kubevirt-config
+  namespace: kubevirt
+```
+
+### win10.yaml
+
+```shell
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: win10
+spec:
+  running: false
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: win10
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        devices:
+          disks:
+          - bootOrder: 1
+            cdrom:
+              bus: sata
+            name: cdromiso
+          - disk:
+              bus: virtio
+            name: harddrive
+          - cdrom:
+              bus: sata
+            name: virtiocontainerdisk
+          interfaces:
+          - masquerade: {}
+            model: e1000 
+            name: default
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: 2G
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - name: cdromiso
+        persistentVolumeClaim:
+          claimName: iso-win10
+      - name: harddrive
+        hostDisk:
+          capacity: 50Gi
+          path: /data/disk.img
+          type: DiskOrCreate
+      - containerDisk:
+          image: kubevirt/virtio-container-disk
+        name: virtiocontainerdisk
+```
+
+```shell
+kubectl apply -f win10.yaml
+kubectl describe vm win10
+kubectl virt start win10
+kubectl describe vmi win10
+kubectl virt stop win10
+kubectl delete vm win10
 
 
-
-
-
-
-
-
-
+kubectl virt console win10
+kubectl virt vnc win10
+```
 
