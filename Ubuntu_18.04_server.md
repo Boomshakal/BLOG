@@ -187,22 +187,22 @@ cd /etc/bind/
 vim named.conf.options
 options {
         directory "/var/cache/bind";
-        listen-on port 53 { 192.168.1.102; 192.168.1.0/24; };
+        listen-on port 53 { 192.168.150.81; 192.168.150.0/23; };
         allow-query     { any; };
-        forwarders      { 192.168.1.1; }; #上一层DNS地址(网关或公网DNS)
+        forwarders      { 192.168.150.1; }; #上一层DNS地址(网关或公网DNS)
         recursion yes;
 };
 vim named.conf.local
 zone "host.com" IN {
         type  master;
         file  "host.com.zone";
-        allow-update { 192.168.1.102; };
+        allow-update { 192.168.150.81; };
 };
 # 添加自定义业务域
-zone "lhm.com" IN {
+zone "k3s.com" IN {
         type  master;
-        file  "lhm.com.zone";
-        allow-update { 192.168.1.102; };
+        file  "k3s.com.zone";
+        allow-update { 192.168.150.81; };
 };
 cd /var/cache/bind
 vim host.com.zone
@@ -218,31 +218,65 @@ $TTL 600    ; 10 minutes
             NS   dns.host.com.
 $TTL 60 ; 1 minute
 dns                A    192.168.1.102
-k8s-master         A    192.168.1.157
-k8s-node1          A    192.168.1.205
-k8s-node2          A    192.168.1.206
+k3s-master         A    192.168.1.157
+k3s-node1          A    192.168.1.205
+k3s-node2          A    192.168.1.206
 
-vim lhm.com.zone 
-$ORIGIN lhm.com.
+vim k3s.com.zone 
+$ORIGIN k3s.com.
 $TTL 600    ; 10 minutes
-@       IN SOA  dns.lhm.com. dnsadmin.lhm.com. (
-                2020041601 ; serial
+@       IN SOA  dns.k3s.com. dnsadmin.k3s.com. (
+                2021070502 ; serial
                 10800      ; refresh (3 hours)
                 900        ; retry (15 minutes)
                 604800     ; expire (1 week)
                 86400      ; minimum (1 day)
                 )
-            NS   dns.lhm.com.
+            NS   dns.k3s.com.
 $TTL 60 ; 1 minute
-dns                A    192.168.1.102
+dns                A    192.168.151.21
+jellyfin           A    192.168.151.21
 
 sudo systemctl enable bind9
 sudo systemctl restart bind9
 
 named-checkconf
-dig -t A k8s-master.host.com @192.168.1.102 +short
+dig -t A k3s-master.host.com @192.168.150.81 +short
 192.168.1.157
 ```
+
+```shell
+apt install bind9
+cd /etc/bind/
+vim named.conf.options
+options {
+        directory "/var/cache/bind";
+        listen-on port 53 { 192.168.150.82; 192.168.150.0/23; };
+        allow-query     { any; };
+        forwarders      { 192.168.150.1; }; #上一层DNS地址(网关或公网DNS)
+        recursion yes;
+
+};
+vim named.conf.local
+zone "host.com" IN {
+        type  slave;
+        masters { 192.168.150.81; };
+        masterfile-format text;
+        file  "/var/cache/bind/host.com.zone";
+};
+# 添加自定义业务域
+zone "k3s.com" IN {
+        type  slave;
+        masters { 192.168.150.81; };
+        masterfile-format text;
+        file  "/var/cache/bind/k3s.com.zone";
+};
+
+sudo systemctl enable bind9
+sudo systemctl restart bind9
+```
+
+
 
 
 
