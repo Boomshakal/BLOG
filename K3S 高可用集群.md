@@ -435,7 +435,10 @@ source ~/.bash_profile
 ```shell
 kubectl create  deployment  nginx-app   --image=nginx   --replicas=3
 
-kubectl get pod
+kubectl get pod -o wide
 kubectl get deployment
+kubectl expose deployment nginx-app --port=80 --type=NodePort
+kubectl get svc
+curl 10.4.7.21:32738
 ```
 
