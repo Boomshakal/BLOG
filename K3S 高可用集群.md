@@ -427,3 +427,15 @@ spec:
 echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> ~/.bash_profile
 source ~/.bash_profile
 ```
+
+
+
+## 测试集群
+
+```shell
+kubectl create  deployment  nginx-app   --image=nginx   --replicas=3
+
+kubectl get pod
+kubectl get deployment
+```
+
