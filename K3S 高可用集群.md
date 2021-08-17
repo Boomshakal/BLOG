@@ -284,7 +284,7 @@ spec:
       serviceAccountName: traefik-ingress-controller
       terminationGracePeriodSeconds: 1
       containers:
-        - image: traefik:laster
+        - image: traefik:v2.1.2
           name: traefik-ingress-lb
           ports:
             - name: web
@@ -310,6 +310,7 @@ spec:
                 - NET_BIND_SERVICE
           args:
             - --configfile=/config/traefik.yaml
+            - --kubernetes.endpoint=https://10.4.7.11:7443
           volumeMounts:
             - mountPath: "/config"
               name: "config"
@@ -409,7 +410,7 @@ metadata:
     kubernetes.io/ingress.class: traefik
 spec:
   entryPoints:
-    - websecure
+    - web
   routes:
   # 这里设置你的域名
     - match: Host(`dashboard.li.com`)
@@ -417,8 +418,6 @@ spec:
       services:
         - name: kubernetes-dashboard
           port: 443
-  tls:
-    secretName: https
 ```
 
 ## 集群访问
@@ -441,4 +440,89 @@ kubectl expose deployment nginx-app --port=80 --type=NodePort
 kubectl get svc
 curl 10.4.7.21:32738
 ```
+
+
+
+## Nginx 负载均衡
+
+### 四层代理
+
+```shell
+apt install nginx
+mkdir /etc/nginx/tcp.d/
+echo 'include /etc/nginx/tcp.d/*.conf;' >>/etc/nginx/nginx.conf
+cat >/etc/nginx/tcp.d/apiserver.conf <<EOF
+stream {
+    upstream kube-apiserver {
+        server 10.4.7.21:6443     max_fails=3 fail_timeout=30s;
+        server 10.4.7.22:6443     max_fails=3 fail_timeout=30s;
+        server 10.4.7.23:6443     max_fails=3 fail_timeout=30s;
+    }
+    server {
+        listen 7443;
+        proxy_connect_timeout 2s;
+        proxy_timeout 900s;
+        proxy_pass kube-apiserver;
+    }
+}
+EOF
+```
+### 七层代理
+
+```
+cat >/etc/nginx/conf.d/k3s.com.conf <<EOF
+upstream default_backend_traefik {
+    server 10.4.7.21:80    max_fails=3 fail_timeout=10s;
+    server 10.4.7.22:80    max_fails=3 fail_timeout=10s;
+    server 10.4.7.23:80    max_fails=3 fail_timeout=10s;
+}
+server {
+    server_name *.k3s.com;
+  
+    location / {
+        proxy_pass http://default_backend_traefik;
+        proxy_set_header Host       $http_host;
+        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
+    }
+}
+EOF
+
+nginx -t
+nginx -s reload
+
+mkdir /etc/nginx/certs
+cd /etc/nginx/certs
+scp root@10.4.7.21:/var/lib/rancher/k3s/server/tls/server-ca.* .
+
+mv server-ca.crt dashboard.crt
+mv server-ca.key dashboard-key.key
+
+cat >/etc/nginx/conf.d/dashboard.k3s.com.conf <<'EOF'
+server {
+    listen       80;
+    server_name  dashboard.k3s.com;
+
+    rewrite ^(.*)$ https://${server_name}$1 permanent;
+}
+server {
+    listen       443 ssl;
+    server_name  dashboard.k3s.com;
+
+    ssl_certificate     "certs/dashboard.crt";
+    ssl_certificate_key "certs/dashboard-key.key";
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout  10m;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        proxy_pass http://default_backend_traefik;
+        proxy_set_header Host       $http_host;
+        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
+    }
+}
+EOF
+```
+
+
 
