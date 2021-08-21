@@ -18,6 +18,9 @@ free -m
 # 同时调整k8s的swappiness参数
 echo "vm.swappiness=0" >> /etc/sysctl.d/k3s.conf
 sysctl -p /etc/sysctl.d/k3s.conf
+
+# Kubectl自动补全
+source <(kubectl completion bash)
  ```
 
 ## 脚本安装
@@ -33,6 +36,7 @@ cat /proc/sys/kernel/random/uuid
 # master1
 curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=uuid INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --cluster-init --no-deploy traefik
 
+cat /var/lib/rancher/k3s/server/token
 # master2
 curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=uuid INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --no-deploy traefik --server https://k3s-master:6443
 
@@ -410,7 +414,7 @@ metadata:
     kubernetes.io/ingress.class: traefik
 spec:
   entryPoints:
-    - web
+    - websecure
   routes:
   # 这里设置你的域名
     - match: Host(`dashboard.li.com`)
@@ -418,6 +422,8 @@ spec:
       services:
         - name: kubernetes-dashboard
           port: 443
+  tls:
+    secretName: https
 ```
 
 ## 集群访问
@@ -526,3 +532,102 @@ EOF
 
 
 
+## Keepalived 高可用
+
+### 创建端口监测脚本
+
+```shell
+cat >/etc/keepalived/check_port.sh <<'EOF'
+#!/bin/bash
+#keepalived 监控端口脚本
+#使用方法：等待keepalived传入端口参数,检查改端口是否存在并返回结果
+CHK_PORT=$1
+if [ -n "$CHK_PORT" ];then
+        PORT_PROCESS=`ss -lnt|grep $CHK_PORT|wc -l`
+        if [ $PORT_PROCESS -eq 0 ];then
+                echo "Port $CHK_PORT Is Not Used,End."
+                exit 1
+        fi
+else
+        echo "Check Port Cant Be Empty!"
+fi
+EOF
+
+chmod +x /etc/keepalived/check_port.sh
+```
+
+```shell
+# keepalived主
+cat >/etc/keepalived/keepalived.conf <<'EOF'
+! Configuration File for keepalived
+global_defs {
+   router_id 10.4.7.21
+}
+vrrp_script chk_nginx {
+    script "/etc/keepalived/check_port.sh 7443"
+    interval 2
+    weight -20
+}
+vrrp_instance VI_1 {
+    state MASTER
+    interface ens33
+    virtual_router_id 251
+    priority 100
+    advert_int 1
+    mcast_src_ip 10.4.7.21
+    nopreempt
+
+    authentication {
+        auth_type PASS
+        auth_pass 11111111
+    }
+    track_script {
+         chk_nginx
+    }
+    virtual_ipaddress {
+        10.4.7.20
+    }
+}
+EOF
+```
+
+```shell
+# keepalived从
+cat >/etc/keepalived/keepalived.conf <<'EOF'
+! Configuration File for keepalived
+global_defs {
+    router_id 10.4.7.22
+}
+vrrp_script chk_nginx {
+    script "/etc/keepalived/check_port.sh 7443"
+    interval 2
+    weight -20
+}
+vrrp_instance VI_1 {
+    state BACKUP
+    interface ens33
+    virtual_router_id 251
+    mcast_src_ip 10.4.7.22
+    priority 90
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 11111111
+    }
+    track_script {
+        chk_nginx
+    }
+    virtual_ipaddress {
+        10.4.7.20
+    }
+}
+EOF
+
+# 10.4.7.23 同 10.4.7.22 
+```
+
+```shell
+systemctl start  keepalived
+systemctl enable keepalived
+ip addr|grep '10.4.7.20'
+```
