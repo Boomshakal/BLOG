@@ -1,12 +1,14 @@
-# K3S 安装
+# K8S 安装
 
 ## 系统检查
 
  ```shell
 # 修改主机名称
-hostnamectl set-hostname k3s-master
+hostnamectl set-hostname k8s-master
 # 修改hosts文件
-echo "10.4.7.21 k3s-master" >> /etc/hosts
+echo "10.4.7.21 k8s-master1" >> /etc/hosts
+echo "10.4.7.22 k8s-master2" >> /etc/hosts
+echo "10.4.7.23 k8s-master3" >> /etc/hosts
 # 查看ufw状态
 ufw status
 # 临时关闭swap
@@ -16,41 +18,115 @@ vi /etc/fstab
 # /swap.img     none    swap    sw      0       0
 free -m
 # 同时调整k8s的swappiness参数
-echo "vm.swappiness=0" >> /etc/sysctl.d/k3s.conf
-sysctl -p /etc/sysctl.d/k3s.conf
+echo "vm.swappiness=0" >> /etc/sysctl.d/k8s.conf
+sysctl -p /etc/sysctl.d/k8s.conf
 
 # Kubectl自动补全
 source <(kubectl completion bash)
  ```
 
-## 脚本安装
 
-### Master
 
-```shell
-cat /proc/sys/kernel/random/uuid
-```
-
+## Docker-CE
 
 ```shell
-# master1
-curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=uuid INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --cluster-init --no-deploy traefik
-
-cat /var/lib/rancher/k3s/server/token
-# master2
-curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=uuid INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --no-deploy traefik --server https://k3s-master:6443
-
-# master3 同master2
+# 国内镜像
+curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+# 查看dockers版本
+docker --version
+# 给普通用户添加权限
+sudo usermod -aG docker $USER
+# docker阿里云加速器
+curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s https://b33dfgq9.mirror.aliyuncs.com
+# 修改进程隔离工具
+# docker默认cgroupfs  k8s使用systemd
+vim /etc/docker/daemon.json
+{
+...
+	"exec-opts": [ "native.cgroupdriver=systemd" ]
+}
+# 重启docker
+systemctl daemon-reload && systemctl restart docker
 ```
 
-### Worker
+## kubeadm
 
 ```shell
-#Master 获取node-token
-cat /var/lib/rancher/k3s/server/node-token
-
-curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn K3S_TOKEN=node-token K3S_URL=https://k3s-master:6443 sh -
+# 安装https
+apt-get update && apt-get install -y apt-transport-https
+# 添加密钥
+curl -fsSL https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | apt-key add -
+# 添加源
+add-apt-repository "deb [arch=amd64] https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main"
+# 更新源
+apt-get update
+# 查看最新版本
+apt-cache madison kubelet kubectl kubeadm
+# 安装指定的版本
+apt install -y kubelet kubectl kubeadm
+# 查看kubelet版本
+kubectl version --client=true -o yaml
+# 配置kubelet禁用swap
+echo 'KUBELET_EXTRA_ARGS="--fail-swap-on=false"' > /etc/default/kubelet
+# 重启kubelet
+systemctl daemon-reload && systemctl restart kubelet
+# 查看kubelet服务启动状态(因缺少缺少很多参数配置文件,需要等待kubeadm init 后生成)
+journalctl -u kubelet -f
 ```
+
+## 初始化k8s-m1
+
+```shell
+cat > kubeadm-config.yaml <<EOF
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+kubernetesVersion: v1.22.1
+imageRepository: registry.aliyuncs.com/google_containers
+controlPlaneEndpoint: "10.4.7.81:6443"
+apiServer:
+  certSANs:    #填写所有kube-apiserver节点的hostname、IP、VIP
+  - k8s-m1
+  - k8s-m2
+  - k8s-m3
+  - k8s-w1
+  - k8s-w2
+  - k8s-w3
+  - apiserver.lb
+  - 10.4.7.20
+networking:
+  serviceSubnet: "10.96.0.0/16"
+  podSubnet: "10.100.0.1/16"
+  dnsDomain: "cluster.local"
+EOF
+
+# kubeadm init
+# 根据您服务器网速的情况，您需要等候 3 - 10 分钟
+kubeadm init --config=kubeadm-config.yaml --upload-certs
+
+# docker pull coredns
+docker pull registry.aliyuncs.com/google_containers/coredns:1.8.4
+docker tag registry.aliyuncs.com/google_containers/coredns:1.8.4 registry.aliyuncs.com/google_containers/coredns:v1.8.4
+
+# 配置 kubectl
+rm -rf /root/.kube/
+mkdir /root/.kube/
+cp -i /etc/kubernetes/admin.conf /root/.kube/config
+
+# 安装 flannel 网络插件
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+# master 去除污点
+kubectl taint nodes --all node-role.kubernetes.io/master-
+```
+
+### k8s-m2,k8s-m3
+
+```shell
+kubeadm join 10.4.7.21:6443 --token swcdwc.etn06vu7t11r1ywq \
+	--discovery-token-ca-cert-hash sha256:0df815a693038402057acb22f2698375d563a03fd16e1050933d25210bda6f5b \
+	--control-plane --certificate-key d192afd75926b20289a6a489272e161c4f4962c97de4d09dd76cc5d89463ba3c
+```
+
 
 
 
@@ -244,7 +320,7 @@ data:
 ### Set Lable
 
 ```shell
-kubectl label nodes k3s-master IngressProxy=true
+kubectl label nodes k8s-master IngressProxy=true
 kubectl get nodes --show-labels
 ```
 
@@ -349,7 +425,7 @@ spec:
 ```
 
 ```shell
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=cert.k3s.com"
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=cert.k8s.com"
 
 kubectl create secret tls https --cert=tls.crt --key=tls.key -n kube-system
 
@@ -369,7 +445,7 @@ kubectl apply -f traefik-dashboard-route.yaml -n kube-system
 ```shell
 GITHUB_URL=https://github.com/kubernetes/dashboard/releases
 VERSION_KUBE_DASHBOARD=$(curl -w '%{url_effective}' -I -L -s -S ${GITHUB_URL}/latest -o /dev/null | sed -e 's|.*/||')
-sudo k3s kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/${VERSION_KUBE_DASHBOARD}/aio/deploy/recommended.yaml
+sudo k8s kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/${VERSION_KUBE_DASHBOARD}/aio/deploy/recommended.yaml
 ```
 
 
@@ -399,7 +475,7 @@ subjects:
 ```
 
 ```shell
-sudo k3s kubectl -n kube-system describe secret admin-user-token | grep '^token'
+kubectl -n kube-system describe secret admin-user-token | grep '^token'
 ```
 
 ### ingress.yaml
@@ -429,7 +505,7 @@ spec:
 ## 集群访问
 
 ```shell
-echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> ~/.bash_profile
+echo "export KUBECONFIG=/etc/kubernetes/admin.conf" >> ~/.bash_profile
 source ~/.bash_profile
 ```
 
@@ -476,14 +552,14 @@ EOF
 ### 七层代理
 
 ```
-cat >/etc/nginx/conf.d/k3s.com.conf <<EOF
+cat >/etc/nginx/conf.d/k8s.com.conf <<EOF
 upstream default_backend_traefik {
     server 10.4.7.21:80    max_fails=3 fail_timeout=10s;
     server 10.4.7.22:80    max_fails=3 fail_timeout=10s;
     server 10.4.7.23:80    max_fails=3 fail_timeout=10s;
 }
 server {
-    server_name *.k3s.com;
+    server_name *.k8s.com;
   
     location / {
         proxy_pass http://default_backend_traefik;
@@ -496,24 +572,21 @@ EOF
 nginx -t
 nginx -s reload
 
-mkdir /etc/nginx/certs
-cd /etc/nginx/certs
-
 # Master 同traefik 自签tls
 cp ~/tls.* .
 # Master2,3
 scp root@10.4.7.21:/root/tls.* .
 
-cat >/etc/nginx/conf.d/dashboard.k3s.com.conf <<'EOF'
+cat >/etc/nginx/conf.d/dashboard.k8s.com.conf <<'EOF'
 server {
     listen       80;
-    server_name  dashboard.k3s.com;
+    server_name  dashboard.k8s.com;
 
     rewrite ^(.*)$ https://${server_name}$1 permanent;
 }
 server {
     listen       443 ssl;
-    server_name  dashboard.k3s.com;
+    server_name  dashboard.k8s.com;
 
     ssl_certificate     "certs/tls.crt";
     ssl_certificate_key "certs/tls.key";
