@@ -95,7 +95,7 @@ apiServer:
   - 10.4.7.20
 networking:
   serviceSubnet: "10.96.0.0/16"
-  podSubnet: "10.100.0.1/16"
+  podSubnet: "10.244.0.0/16"
   dnsDomain: "cluster.local"
 EOF
 
