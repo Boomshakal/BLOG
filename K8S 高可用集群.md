@@ -82,7 +82,7 @@ apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
 kubernetesVersion: v1.22.1
 imageRepository: registry.aliyuncs.com/google_containers
-controlPlaneEndpoint: "10.4.7.81:6443"
+controlPlaneEndpoint: "10.4.7.21:6443"
 apiServer:
   certSANs:    #填写所有kube-apiserver节点的hostname、IP、VIP
   - k8s-m1

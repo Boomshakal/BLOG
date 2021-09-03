@@ -38,10 +38,21 @@ curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=uui
 
 cat /var/lib/rancher/k3s/server/token
 # master2
-curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=uuid INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --no-deploy traefik --server https://k3s-master:6443
+curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=uuid INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --no-deploy traefik --server https://vip:6443
 
 # master3 同master2
 ```
+
+#### 启用高可用
+
+```shell
+vim /etc/rancher/k3s/k3s.yaml 
+……
+    server: https://10.4.7.20:7443
+……
+```
+
+
 
 ### Worker
 
