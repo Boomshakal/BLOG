@@ -1,14 +1,195 @@
 # K8S 安装
 
+
+## Nginx 负载均衡
+
+### 四层代理
+
+```shell
+apt install nginx keepalived -y
+mkdir /etc/nginx/tcp.d/
+echo 'include /etc/nginx/tcp.d/*.conf;' >>/etc/nginx/nginx.conf
+cat >/etc/nginx/tcp.d/apiserver.conf <<EOF
+stream {
+    upstream kube-apiserver {
+        server 10.4.7.21:6443     max_fails=3 fail_timeout=30s;
+        server 10.4.7.22:6443     max_fails=3 fail_timeout=30s;
+        server 10.4.7.23:6443     max_fails=3 fail_timeout=30s;
+    }
+    server {
+        listen 7443;
+        proxy_connect_timeout 2s;
+        proxy_timeout 900s;
+        proxy_pass kube-apiserver;
+    }
+}
+EOF
+```
+### 七层代理
+
+```
+cat >/etc/nginx/conf.d/k8s.com.conf <<EOF
+upstream default_backend_traefik {
+    server 10.4.7.21:80    max_fails=3 fail_timeout=10s;
+    server 10.4.7.22:80    max_fails=3 fail_timeout=10s;
+    server 10.4.7.23:80    max_fails=3 fail_timeout=10s;
+}
+server {
+    server_name *.k8s.com;
+  
+    location / {
+        proxy_pass http://default_backend_traefik;
+        proxy_set_header Host       $http_host;
+        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
+    }
+}
+EOF
+
+nginx -t
+nginx -s reload
+
+# Master 同traefik 自签tls
+cp ~/tls.* .
+# Master2,3
+scp root@10.4.7.21:/root/tls.* .
+
+cat >/etc/nginx/conf.d/dashboard.k8s.com.conf <<'EOF'
+server {
+    listen       80;
+    server_name  dashboard.k8s.com;
+
+    rewrite ^(.*)$ https://${server_name}$1 permanent;
+}
+server {
+    listen       443 ssl;
+    server_name  dashboard.k8s.com;
+
+    ssl_certificate     "certs/tls.crt";
+    ssl_certificate_key "certs/tls.key";
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout  10m;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        proxy_pass http://default_backend_traefik;
+        proxy_set_header Host       $http_host;
+        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
+    }
+}
+EOF
+```
+
+
+
+## Keepalived 高可用
+
+### 创建端口监测脚本
+
+```shell
+cat >/etc/keepalived/check_port.sh <<'EOF'
+#!/bin/bash
+#keepalived 监控端口脚本
+#使用方法：等待keepalived传入端口参数,检查改端口是否存在并返回结果
+CHK_PORT=$1
+if [ -n "$CHK_PORT" ];then
+        PORT_PROCESS=`ss -lnt|grep $CHK_PORT|wc -l`
+        if [ $PORT_PROCESS -eq 0 ];then
+                echo "Port $CHK_PORT Is Not Used,End."
+                exit 1
+        fi
+else
+        echo "Check Port Cant Be Empty!"
+fi
+EOF
+
+chmod +x /etc/keepalived/check_port.sh
+```
+
+```shell
+# keepalived主
+cat >/etc/keepalived/keepalived.conf <<'EOF'
+! Configuration File for keepalived
+global_defs {
+   router_id 10.4.7.21
+}
+vrrp_script chk_nginx {
+    script "/etc/keepalived/check_port.sh 7443"
+    interval 2
+    weight -20
+}
+vrrp_instance VI_1 {
+    state MASTER
+    interface ens33
+    virtual_router_id 251
+    priority 100
+    advert_int 1
+    mcast_src_ip 10.4.7.21
+    nopreempt
+
+    authentication {
+        auth_type PASS
+        auth_pass 11111111
+    }
+    track_script {
+         chk_nginx
+    }
+    virtual_ipaddress {
+        10.4.7.20
+    }
+}
+EOF
+```
+
+```shell
+# keepalived从
+cat >/etc/keepalived/keepalived.conf <<'EOF'
+! Configuration File for keepalived
+global_defs {
+    router_id 10.4.7.22
+}
+vrrp_script chk_nginx {
+    script "/etc/keepalived/check_port.sh 7443"
+    interval 2
+    weight -20
+}
+vrrp_instance VI_1 {
+    state BACKUP
+    interface ens33
+    virtual_router_id 251
+    mcast_src_ip 10.4.7.22
+    priority 90
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 11111111
+    }
+    track_script {
+        chk_nginx
+    }
+    virtual_ipaddress {
+        10.4.7.20
+    }
+}
+EOF
+
+# 10.4.7.23 同 10.4.7.22 
+```
+
+```shell
+systemctl start  keepalived
+systemctl enable keepalived
+ip addr|grep '10.4.7.20'
+```
 ## 系统检查
 
  ```shell
 # 修改主机名称
-hostnamectl set-hostname k8s-master
+hostnamectl set-hostname k8s-m1
 # 修改hosts文件
-echo "10.4.7.21 k8s-master1" >> /etc/hosts
-echo "10.4.7.22 k8s-master2" >> /etc/hosts
-echo "10.4.7.23 k8s-master3" >> /etc/hosts
+echo "10.4.7.21 k8s-m1" >> /etc/hosts
+echo "10.4.7.22 k8s-m2" >> /etc/hosts
+echo "10.4.7.23 k8s-m3" >> /etc/hosts
 # 查看ufw状态
 ufw status
 # 临时关闭swap
@@ -320,7 +501,7 @@ data:
 ### Set Lable
 
 ```shell
-kubectl label nodes k8s-master IngressProxy=true
+kubectl label nodes all IngressProxy=true
 kubectl get nodes --show-labels
 ```
 
@@ -417,7 +598,7 @@ spec:
     - web
   routes:
   # 这里设置你的域名
-    - match: Host(`traefik.li.com`)
+    - match: Host(`traefik.k8s.com`)
       kind: Rule
       services:
         - name: traefik
@@ -493,7 +674,7 @@ spec:
     - websecure
   routes:
   # 这里设置你的域名
-    - match: Host(`dashboard.li.com`)
+    - match: Host(`dashboard.k8s.com`)
       kind: Rule
       services:
         - name: kubernetes-dashboard
@@ -521,187 +702,4 @@ kubectl get deployment
 kubectl expose deployment nginx-app --port=80 --type=NodePort
 kubectl get svc
 curl 10.4.7.21:32738
-```
-
-
-
-## Nginx 负载均衡
-
-### 四层代理
-
-```shell
-apt install nginx
-mkdir /etc/nginx/tcp.d/
-echo 'include /etc/nginx/tcp.d/*.conf;' >>/etc/nginx/nginx.conf
-cat >/etc/nginx/tcp.d/apiserver.conf <<EOF
-stream {
-    upstream kube-apiserver {
-        server 10.4.7.21:6443     max_fails=3 fail_timeout=30s;
-        server 10.4.7.22:6443     max_fails=3 fail_timeout=30s;
-        server 10.4.7.23:6443     max_fails=3 fail_timeout=30s;
-    }
-    server {
-        listen 7443;
-        proxy_connect_timeout 2s;
-        proxy_timeout 900s;
-        proxy_pass kube-apiserver;
-    }
-}
-EOF
-```
-### 七层代理
-
-```
-cat >/etc/nginx/conf.d/k8s.com.conf <<EOF
-upstream default_backend_traefik {
-    server 10.4.7.21:80    max_fails=3 fail_timeout=10s;
-    server 10.4.7.22:80    max_fails=3 fail_timeout=10s;
-    server 10.4.7.23:80    max_fails=3 fail_timeout=10s;
-}
-server {
-    server_name *.k8s.com;
-  
-    location / {
-        proxy_pass http://default_backend_traefik;
-        proxy_set_header Host       $http_host;
-        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
-    }
-}
-EOF
-
-nginx -t
-nginx -s reload
-
-# Master 同traefik 自签tls
-cp ~/tls.* .
-# Master2,3
-scp root@10.4.7.21:/root/tls.* .
-
-cat >/etc/nginx/conf.d/dashboard.k8s.com.conf <<'EOF'
-server {
-    listen       80;
-    server_name  dashboard.k8s.com;
-
-    rewrite ^(.*)$ https://${server_name}$1 permanent;
-}
-server {
-    listen       443 ssl;
-    server_name  dashboard.k8s.com;
-
-    ssl_certificate     "certs/tls.crt";
-    ssl_certificate_key "certs/tls.key";
-    ssl_session_cache shared:SSL:1m;
-    ssl_session_timeout  10m;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
-
-    location / {
-        proxy_pass http://default_backend_traefik;
-        proxy_set_header Host       $http_host;
-        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
-    }
-}
-EOF
-```
-
-
-
-## Keepalived 高可用
-
-### 创建端口监测脚本
-
-```shell
-cat >/etc/keepalived/check_port.sh <<'EOF'
-#!/bin/bash
-#keepalived 监控端口脚本
-#使用方法：等待keepalived传入端口参数,检查改端口是否存在并返回结果
-CHK_PORT=$1
-if [ -n "$CHK_PORT" ];then
-        PORT_PROCESS=`ss -lnt|grep $CHK_PORT|wc -l`
-        if [ $PORT_PROCESS -eq 0 ];then
-                echo "Port $CHK_PORT Is Not Used,End."
-                exit 1
-        fi
-else
-        echo "Check Port Cant Be Empty!"
-fi
-EOF
-
-chmod +x /etc/keepalived/check_port.sh
-```
-
-```shell
-# keepalived主
-cat >/etc/keepalived/keepalived.conf <<'EOF'
-! Configuration File for keepalived
-global_defs {
-   router_id 10.4.7.21
-}
-vrrp_script chk_nginx {
-    script "/etc/keepalived/check_port.sh 7443"
-    interval 2
-    weight -20
-}
-vrrp_instance VI_1 {
-    state MASTER
-    interface ens33
-    virtual_router_id 251
-    priority 100
-    advert_int 1
-    mcast_src_ip 10.4.7.21
-    nopreempt
-
-    authentication {
-        auth_type PASS
-        auth_pass 11111111
-    }
-    track_script {
-         chk_nginx
-    }
-    virtual_ipaddress {
-        10.4.7.20
-    }
-}
-EOF
-```
-
-```shell
-# keepalived从
-cat >/etc/keepalived/keepalived.conf <<'EOF'
-! Configuration File for keepalived
-global_defs {
-    router_id 10.4.7.22
-}
-vrrp_script chk_nginx {
-    script "/etc/keepalived/check_port.sh 7443"
-    interval 2
-    weight -20
-}
-vrrp_instance VI_1 {
-    state BACKUP
-    interface ens33
-    virtual_router_id 251
-    mcast_src_ip 10.4.7.22
-    priority 90
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass 11111111
-    }
-    track_script {
-        chk_nginx
-    }
-    virtual_ipaddress {
-        10.4.7.20
-    }
-}
-EOF
-
-# 10.4.7.23 同 10.4.7.22 
-```
-
-```shell
-systemctl start  keepalived
-systemctl enable keepalived
-ip addr|grep '10.4.7.20'
 ```

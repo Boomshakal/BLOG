@@ -1941,7 +1941,7 @@ apache web+java+tomcat应用服务器+oracle +memcached+redhat企业版+svn(代�
 
 开源技术栈
 
-nginx(负载均衡)+python(virtualenv)+uwsgi(python应用服务器，启动10个django dfr)+mysql+redis+linu(centos7)+git+vue(前端代码服务器)
+nginx(负载均衡)+python(virtualenv)+uwsgi(python应用服务器，启动10个django dfr)+mysql+redis+linux(centos7)+git+vue(前端代码服务器)
 
 1. 安装依赖环境
 
@@ -2085,6 +2085,48 @@ server {
         }
 ```
 
+## Nginx解决跨域问题
+
+```shell
+# 允许跨域请求的域名，*代表所有
+add_header 'Access-Control-Allow-Origin' *;
+# 允许带上cookie请求
+add_header 'Access-Control-Allow-Credentials' 'true';
+# 允许请求的方法，例如：GET、POST、PUT、DELETE等，*代表所有
+add_header 'Access-Control-Allow-Methods' *;
+# 允许请求的头信息，例如：DNT,X-Mx-ReqToken,Keep-Alive,User-Agent等，*代表所有
+add_header 'Access-Control-Allow-Headers' *;
+```
+
+## 验证头信息中的 referer 参数
+
+```shell
+   server {
+        listen       80;   # 端口
+        server_name  www.zhuifengren.cn;  # 服务名，可以是IP地址或者域名
+
+        location / {   # 根路径
+　　　　　　root   html;  # 对应nginx安装目标下的html文件夹
+          index  hello.html; # 指定首页为 hello.html
+        }
+
+        location ~* \.(GIF|PNG|jpg|bmp|jpeg) {  # *代表不区分大小写
+            # 校验请求是否来自于zhuifengren.cn这个站点，不是则返回404页面
+        　　valid_referers *.zhuifengren.cn;
+        　　if ($invalid_referer) {
+               return 404;
+        　　}
+　　　　　  root /home/img;
+　　　　}
+
+        error_page   500 502 503 504  /50x.html;  # 指定这些状态码跳转的错误页
+        location = /50x.html {
+            root   html;
+        }
+
+    }
+```
+
 ## Nginx反向代理
 
 1. 实验准备2个nginx服务器
@@ -2149,7 +2191,7 @@ upstream django {
 }
 ```
 
-   - ip_hash 不能和
+   - ip_hash 不能和backup指令同时使用
 
 ```shell
 upstream django {
@@ -2896,6 +2938,26 @@ docker run -d --name=sshd li/sshd /usr/sbin/sshd -D
 - 基于Dockerfile构建简易镜像
 
 ```shell
+FROM  指定基础镜像
+MAINTAINER  指定维护者信息,可以没有
+RUN  你想让它干啥(在命令前面加上RUN即可)
+ADD  添加宿主机的文件到容器内,还多了一个自动解压的功能
+# RUN tar -Zxf /opt/xx.tgz 	# 报错!该tgz文件不存在! !
+COPY  作用和ADD是一样的,都是拷贝宿主机的文件到容器内, COPY就是仅仅拷贝
+WORKDIR  相当于cd命令,设置当前工作目录
+VOLUME  设置目录映射,挂载主机目录
+EXPOSE  指定对外的端口,在容器内暴露一个端口,端口 EXPORT 80
+CMD  指定容器启动后的要干的事情
+ENTRYPOINT	作用和CMD一样，都是在指定容器启动程序以及参数。
+# 当指定了ENTRYPOINT之后，CMD指令的语义就有了变化，而是把CMD的内容当作参数传递给ENTRYPOINT指令。
+ARG	 设置环境变量
+# ARG只是用于构建镜像需要设置的变量，容器运行时就消失了
+ENV   和ARG一样，都是设置环境变量
+# 区别在于ENV无论是在镜像构建时，还是容器运行，该变量都可以使用
+USER  用于改变环境，用于切换用户
+```
+
+```shell
 FROM
 	Syntax:
 		FROM <repo>:[:<tag>]
@@ -3023,12 +3085,6 @@ docker network create -d overlay --subnet 172.16.0.0/24 --gateway 172.16.0.254  
 docker run -it --network ol1 --name oldboy01  busybox /bin/bash
 每个容器有两块网卡,eth0实现容器间的通讯,eth1实现容器访问外网
 ```
-
-
-
-
-
-
 
 
 
@@ -3629,6 +3685,19 @@ scheduler            Healthy   ok
 controller-manager   Healthy   ok
 etcd-0               Healthy   {"health":"true"}
 ```
+
+## k8s namespace 一直处于Terminating
+
+```shell
+kubectl get ns kubesphere-system -o json > tmp.json
+# 将spec内容删掉
+vim tmp.json
+kubectl proxy
+curl -k -H "Content-Type: application/json" -X PUT --data-binary @tmp.json http://127.0.0.1:8001/api/v1/namespaces/kubesphere-system/finalize
+kubectl get ns
+```
+
+
 
 ## k8s --nodePort、port、targetPort、containerPort
 
