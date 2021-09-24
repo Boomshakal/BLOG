@@ -3804,6 +3804,34 @@ kubectl rolling-update nginx -f k8s_nginx2_rc.yml  --update-period=10s
 # kubectl rolling-update OLDRCNAME -f  RCFILE --update-period=10s 
 ```
 
+## RS.yaml
+
+```shell
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: guestbook
+    tier: frontend
+spec:
+  # modify replicas according to your case
+  replicas: 3
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+      - name: php-redis
+        image: gcr.io/google_samples/gb-frontend:v3
+```
+
+
+
 
 
 ## Deployment.yaml
