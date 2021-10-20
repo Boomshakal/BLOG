@@ -4,7 +4,7 @@
 
 1. 用户请求到django,首先经过wsgi,中间件,然后到url路由系统,执行视图类中继承APIView执行as_view方法
 
-2. 在源码中可以看到VPIView继承了django的View类,通过super执行View中的as_view方法[详细看文章](http://www.cnblogs.com/supery007/p/8432324.html),最终返回执行self.dispatch()
+2. 在源码中可以看到APIView继承了django的View类,通过super执行View中的as_view方法[详细看文章](http://www.cnblogs.com/supery007/p/8432324.html),最终返回执行self.dispatch()
 
 3. 按照django类中查找顺序现从自己的方法中找,如果自己没有dispatch方法再从继承的父类中找,从APIView中找dispatch方法
 

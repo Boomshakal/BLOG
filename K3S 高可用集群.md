@@ -4,9 +4,11 @@
 
  ```shell
 # 修改主机名称
-hostnamectl set-hostname k3s-master
+hostnamectl set-hostname k3s-m1
 # 修改hosts文件
-echo "10.4.7.21 k3s-master" >> /etc/hosts
+echo "10.4.7.21 k3s-m1" >> /etc/hosts
+echo "10.4.7.22 k3s-m2" >> /etc/hosts
+echo "10.4.7.23 k3s-m3" >> /etc/hosts
 # 查看ufw状态
 ufw status
 # 临时关闭swap
@@ -20,7 +22,7 @@ echo "vm.swappiness=0" >> /etc/sysctl.d/k3s.conf
 sysctl -p /etc/sysctl.d/k3s.conf
 
 # Kubectl自动补全
-source <(kubectl completion bash)
+kubectl completion --help
  ```
 
 ## 脚本安装
@@ -28,17 +30,17 @@ source <(kubectl completion bash)
 ### Master
 
 ```shell
-cat /proc/sys/kernel/random/uuid
+UUID=$(cat /proc/sys/kernel/random/uuid)
 ```
 
 
 ```shell
 # master1
-curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=uuid INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --cluster-init --no-deploy traefik
+curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=$UUID INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --cluster-init --no-deploy traefik --tls-san="10.4.7.20"
 
 cat /var/lib/rancher/k3s/server/token
 # master2
-curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=uuid INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --no-deploy traefik --server https://vip:6443
+curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=$UUID INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --no-deploy traefik --tls-san="10.4.7.20" --server https://10.4.7.21:6443
 
 # master3 同master2
 ```
@@ -60,7 +62,7 @@ vim /etc/rancher/k3s/k3s.yaml
 #Master 获取node-token
 cat /var/lib/rancher/k3s/server/node-token
 
-curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn K3S_TOKEN=node-token K3S_URL=https://k3s-master:6443 sh -
+curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn K3S_TOKEN=node-token K3S_URL=https://10.4.7.21:6443 sh -
 ```
 
 
@@ -255,7 +257,7 @@ data:
 ### Set Lable
 
 ```shell
-kubectl label nodes k3s-master IngressProxy=true
+kubectl label nodes --all IngressProxy=true
 kubectl get nodes --show-labels
 ```
 
@@ -325,7 +327,7 @@ spec:
                 - NET_BIND_SERVICE
           args:
             - --configfile=/config/traefik.yaml
-            - --kubernetes.endpoint=https://10.4.7.11:7443
+            - --kubernetes.endpoint=https://10.4.7.20:7443
           volumeMounts:
             - mountPath: "/config"
               name: "config"
@@ -428,7 +430,7 @@ spec:
     - websecure
   routes:
   # 这里设置你的域名
-    - match: Host(`dashboard.li.com`)
+    - match: Host(`dashboard.k3s.com`)
       kind: Rule
       services:
         - name: kubernetes-dashboard
@@ -549,6 +551,8 @@ EOF
 ### 创建端口监测脚本
 
 ```shell
+sudo apt-get install keepalived
+
 cat >/etc/keepalived/check_port.sh <<'EOF'
 #!/bin/bash
 #keepalived 监控端口脚本
