@@ -2796,22 +2796,15 @@ docker exec -it redis-test /bin/bash
    1. 镜像相关
 
 - docker search java：在Docker Hub（或阿里镜像）仓库中搜索关键字（如java）的镜像
-
 - docker pull java:8：从仓库中下载镜像，若要指定版本，则要在冒号后指定
-
 - docker images：列出已经下载的镜像
-
 - docker rmi java：删除本地镜像
-
 - docker rmi -f \`docker images -q\`  删除所有镜像
-
 - docker tag 355627632b2 li/ubuntu:v1  设置标签
-
 - docker save -o /home/user/images/ubuntu_14.04.tar ubuntu:14.04 ：导出镜像
-
 - docker load --input ubuntu_14.04.tar ：导入镜像
-
 - docker build -t image_name:version Dockerfile_path ：构建镜像
+- docker commit [OPTIONS] CONTAINER [REPOSITORY[:TAG]]
 
 2. 容器相关
 
