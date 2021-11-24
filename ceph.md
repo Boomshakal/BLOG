@@ -100,7 +100,8 @@ systemctl enable --now ceph-mgr@$NODENAME
 
 # close auth_allow_insecure_global_id_reclaim
 ceph config set mon auth_allow_insecure_global_id_reclaim false
-
+# 允许删除pool
+ceph config set mon mon_allow_pool_delete true
 ```
 Confirm Cluster status
 ```
@@ -614,6 +615,9 @@ ceph osd pool application enable nfs-ganesha cephfs
 
 [root@node1 ~]# docker ps | grep nfs
 [root@node1 ~]# ceph orch ls  | grep nfs
+
+dnf -y install nfs-utils
+mount -t nfs4 node1:/vfs_ceph /mnt
 ```
 
 

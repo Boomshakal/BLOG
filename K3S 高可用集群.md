@@ -38,7 +38,7 @@ UUID=$(cat /proc/sys/kernel/random/uuid)
 # master1
 curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=$UUID INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --cluster-init --no-deploy traefik --tls-san="10.4.7.20"
 
-cat /var/lib/rancher/k3s/server/token
+# cat /var/lib/rancher/k3s/server/token
 # master2
 curl -sfL http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | K3S_TOKEN=$UUID INSTALL_K3S_VERSION=v1.19.11+k3s1 INSTALL_K3S_MIRROR=cn sh -s - server --no-deploy traefik --tls-san="10.4.7.20" --server https://10.4.7.21:6443
 

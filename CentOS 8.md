@@ -3,11 +3,19 @@
 ## [阿里云源](https://developer.aliyun.com/mirror/centos?spm=a2c6h.13651102.0.0.3e221b11YGZDPv)
 
 ```shell
-mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup
-
-wget -O /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-8.repo
-# 非阿里云主机
+# 阿里云Base源
+mv /etc/yum.repos.d/CentOS-Linux-BaseOS.repo /etc/yum.repos.d/CentOS-Base.repo.backup
+curl -o /etc/yum.repos.d/CentOS-Linux-BaseOS.repo https://mirrors.aliyun.com/repo/Centos-8.repo
+yum makecache
 sed -i -e '/mirrors.cloud.aliyuncs.com/d' -e '/mirrors.aliyuncs.com/d' /etc/yum.repos.d/CentOS-Linux-BaseOS.repo
+
+# 阿里云epel源
+dnf -y install epel-release
+mv /etc/yum.repos.d/epel.repo /etc/yum.repos.d/epel.repo.backup
+mv /etc/yum.repos.d/epel-testing.repo /etc/yum.repos.d/epel-testing.repo.backup
+yum install -y https://mirrors.aliyun.com/epel/epel-release-latest-8.noarch.rpm
+sed -i 's|^#baseurl=https://download.example/pub|baseurl=https://mirrors.aliyun.com|' /etc/yum.repos.d/epel*
+sed -i 's|^metalink|#metalink|' /etc/yum.repos.d/epel*
 yum makecache
 ```
 
@@ -44,6 +52,17 @@ nmcli c up ens33
 
 ip a
 ```
+
+## 关闭防火墙
+
+```shell
+# 关闭防火墙和selinux
+systemctl disable --now firewalld
+setenforce 0
+sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
+```
+
+
 
 
 
