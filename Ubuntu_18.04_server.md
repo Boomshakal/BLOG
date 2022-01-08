@@ -176,6 +176,29 @@ sudo smbpasswd -a li
 sudo /etc/init.d/smbd restart
 ```
 
+# SSH设置
+
+```shell
+ssh-keygen
+vi ~/.ssh/config
+Host node01
+    Hostname node01.srv.world
+    User root
+Host node02
+    Hostname node02.srv.world
+    User root
+Host node03
+    Hostname node03.srv.world
+    User root
+
+chmod 600 ~/.ssh/config
+ssh-copy-id node01
+ssh-copy-id node02
+ssh-copy-id node03
+```
+
+
+
 # DNS服务器
 
 ```shell
