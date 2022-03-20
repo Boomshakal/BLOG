@@ -610,6 +610,40 @@ sz filepath #sz pro_cel.rar
 
 压缩：lha -a FileName.lha FileName
 
+# 创建虚拟网卡
+
+```
+virsh net-list
+virsh net-destroy default    //重启libvirtd服务后会恢复
+virsh net-undefine default   //彻底删除，重启系统后也不会恢复
+
+vim /var/lib/libvirt/network/default.xml
+<!--
+WARNING: THIS IS AN AUTO-GENERATED FILE. CHANGES TO IT ARE LIKELY TO BE
+OVERWRITTEN AND LOST. Changes to this xml configuration should be made using:
+  virsh net-edit default
+or other application using the libvirt API.
+-->
+ 
+<network>
+  <name>default</name>
+  <uuid>c8fcbb0a-a512-434b-a791-fcdd7d9a5fd8</uuid>
+  <forward mode='nat'/>
+  <bridge name='virbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:cc:20:74'/>
+  <ip address='192.168.122.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.122.2' end='192.168.122.254'/>
+    </dhcp>
+  </ip>
+</network>
+
+virsh net-define /var/lib/libvirt/network/default.xml
+virsh net-start default
+virsh net-autostart default 
+virsh net-list
+```
+
 
 
 # 修改IP地址
