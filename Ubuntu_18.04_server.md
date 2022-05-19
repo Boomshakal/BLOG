@@ -1134,6 +1134,10 @@ sudo service mysql restart
 3. 初始化
 
 ```shell
+# root随机密码
+grep 'A temporary password' /var/log/mysqld.log |tail -1
+
+
 mysql_secure_installation
 
 Enter current password for root (entry for none):entry
